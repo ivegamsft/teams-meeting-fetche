@@ -72,20 +72,37 @@ output "storage_account_primary_connection_string" {
   sensitive   = true
 }
 
-// Event Grid outputs (for future use)
+// Event Grid outputs
 output "eventgrid_topic_endpoint" {
   description = "Event Grid topic endpoint"
-  value       = null
+  value       = azurerm_eventgrid_topic.webhook_events.endpoint
+}
+
+output "eventgrid_topic_name" {
+  description = "Event Grid topic name"
+  value       = azurerm_eventgrid_topic.webhook_events.name
 }
 
 output "eventgrid_topic_key" {
   description = "Event Grid topic access key"
-  value       = null
+  value       = azurerm_eventgrid_topic.webhook_events.primary_access_key
   sensitive   = true
 }
 
+// Application Insights outputs
 output "appinsights_instrumentation_key" {
   description = "Application Insights instrumentation key"
-  value       = null
+  value       = azurerm_application_insights.main.instrumentation_key
   sensitive   = true
+}
+
+output "appinsights_connection_string" {
+  description = "Application Insights connection string"
+  value       = azurerm_application_insights.main.connection_string
+  sensitive   = true
+}
+
+output "appinsights_app_id" {
+  description = "Application Insights application ID"
+  value       = azurerm_application_insights.main.app_id
 }

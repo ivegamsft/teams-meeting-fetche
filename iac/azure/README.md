@@ -24,6 +24,7 @@ Resources are named using the pattern: `{base}-{resource-type}-{region}-{suffix}
 - **Suffix**: 6-character random alphanumeric string (generated once, stored in Terraform state)
 
 ### Examples:
+
 - Resource Group: `tmf-rg-eus-a1b2c3`
 - Key Vault: `tmf-kv-eus-a1b2c3`
 - Storage Account: `tmfsteus a1b2c3` (no hyphens due to Azure restrictions)
@@ -72,6 +73,7 @@ az role assignment list \
 Your service principal also needs **Microsoft Graph API permissions** to create Azure AD applications and groups:
 
 **Required API Permissions:**
+
 - `Application.ReadWrite.All` - Create and manage app registrations
 - `Group.ReadWrite.All` - Create and manage groups
 
@@ -100,6 +102,7 @@ az ad app permission admin-consent \
 ```
 
 **Alternatively, in Azure Portal:**
+
 1. Navigate to **Azure Active Directory** → **App registrations** → Your SPN
 2. Click **API permissions** → **Add a permission**
 3. Select **Microsoft Graph** → **Application permissions**

@@ -189,7 +189,7 @@ resource "azurerm_storage_container" "webhooks" {
   name                  = "webhooks"
   storage_account_name  = azurerm_storage_account.webhook_storage.name
   container_access_type = "private"
-  
+
   depends_on = [azurerm_role_assignment.storage_deployment_spn]
 }
 
@@ -198,6 +198,70 @@ resource "azurerm_role_assignment" "storage_app_sp" {
   scope                = azurerm_storage_account.webhook_storage.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azuread_service_principal.tmf_app.object_id
+}
+
+// Log Analytics Workspace for Application Insights
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "${local.base_name}-law-${var.region_short}-${local.suffix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+
+  tags = {
+    Environment = var.environment
+    Project     = "teams-meeting-fetcher"
+    ManagedBy   = "terraform"
+    Suffix      = local.suffix
+  }
+}
+
+// Application Insights
+resource "azurerm_application_insights" "main" {
+  name                = "${local.base_name}-ai-${var.region_short}-${local.suffix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  workspace_id        = azurerm_log_analytics_workspace.main.id
+  application_type    = "web"
+
+  tags = {
+    Environment = var.environment
+    Project     = "teams-meeting-fetcher"
+    ManagedBy   = "terraform"
+    Suffix      = local.suffix
+  }
+}
+
+// Event Grid Topic for webhook events
+resource "azurerm_eventgrid_topic" "webhook_events" {
+  name                = "${local.base_name}-egt-${var.region_short}-${local.suffix}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  tags = {
+    Environment = var.environment
+    Project     = "teams-meeting-fetcher"
+    ManagedBy   = "terraform"
+    Suffix      = local.suffix
+  }
+}
+
+// Store Event Grid key in Key Vault
+resource "azurerm_key_vault_secret" "eventgrid_key" {
+  name         = "eventgrid-access-key"
+  value        = azurerm_eventgrid_topic.webhook_events.primary_access_key
+  key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [azurerm_role_assignment.kv_deployment_spn]
+}
+
+// Store Application Insights instrumentation key in Key Vault
+resource "azurerm_key_vault_secret" "appinsights_key" {
+  name         = "appinsights-instrumentation-key"
+  value        = azurerm_application_insights.main.instrumentation_key
+  key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [azurerm_role_assignment.kv_deployment_spn]
 }
 
 // Future expansion:

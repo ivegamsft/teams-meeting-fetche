@@ -332,6 +332,195 @@ npm run test:watch
   - RBAC-only security (no keys in code)
 - **Minimal Serverless (AWS + Azure Event Grid)**: Use [Minimal Serverless Specification](./specs/infrastructure-minimal-serverless-spec.md) with Terraform code under [iac/aws/](./iac/aws/) for low-cost, event-driven deployments
 
+### Azure Deployment with Terraform
+
+The Azure infrastructure uses Terraform to provision:
+
+- Azure AD app registration with Microsoft Graph API permissions
+- Service principal for the application
+- Admin security group
+- Key Vault (RBAC-enabled) for secrets storage
+- Storage Account (RBAC-only, no key-based authentication)
+- Blob container for webhook payloads
+- Role assignments for proper RBAC access
+
+#### Prerequisites
+
+1. Azure CLI installed and authenticated
+2. Terraform >= 1.0 installed
+3. Azure subscription with permissions to:
+   - Create Azure AD applications and service principals
+   - Assign Azure AD API permissions (requires Application.ReadWrite.All, Group.ReadWrite.All)
+   - Create Azure resources (Contributor role on subscription)
+
+#### Deploy Azure Infrastructure
+
+```bash
+cd iac/azure
+
+# Copy terraform.tfvars.example to terraform.tfvars
+# Update with your subscription ID, tenant ID, and service principal credentials
+
+terraform init
+terraform plan
+terraform apply
+```
+
+The deployment creates a unique 6-character suffix for all resources (e.g., `7onuku`) to ensure globally unique names.
+
+#### Retrieve App Client Secret
+
+After deployment, the client secret is stored in Key Vault:
+
+```bash
+# Get the Key Vault name from Terraform output
+az keyvault secret show \
+  --vault-name <keyvault-name> \
+  --name app-client-secret \
+  --query value -o tsv
+```
+
+Update `.env.local.azure` with this value.
+
+#### Grant Admin Consent
+
+The app registration requires admin consent for Microsoft Graph API permissions:
+
+1. Navigate to Azure Portal → Azure AD → App registrations
+2. Find your app (e.g., "Teams Meeting Fetcher (dev)")
+3. Go to API permissions
+4. Click "Grant admin consent for [Your Tenant]"
+
+Required permissions:
+
+- `Calendars.Read` (Application)
+- `OnlineMeetings.Read.All` (Application)
+- `Group.Read.All` (Application)
+- `Application.ReadWrite.All` (Application)
+
+#### Generate Environment File
+
+```powershell
+# PowerShell
+./scripts/generate-azure-env.ps1
+```
+
+```bash
+# Bash
+./scripts/generate-azure-env.sh
+```
+
+This creates `.env.local.azure` with all necessary configuration from Terraform outputs.
+
+#### Complete Environment Configuration
+
+After generating the environment file, populate the remaining secrets:
+
+**1. Retrieve the client secret from Key Vault:**
+
+```bash
+# Get Key Vault name from Terraform outputs (or check .env.local.azure)
+cd iac/azure
+terraform output key_vault_name
+
+# Get the client secret (stored during deployment)
+az keyvault secret show \
+  --vault-name <key-vault-name> \
+  --name app-client-secret \
+  --query value -o tsv
+```
+
+If you need to grant yourself Key Vault permissions first:
+
+```bash
+# Grant yourself read access to secrets
+# Replace <subscription-id> and <key-vault-name> with your values
+az role assignment create \
+  --role "Key Vault Secrets User" \
+  --assignee $(az ad signed-in-user show --query id -o tsv) \
+  --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
+```
+
+**2. Generate a webhook authentication secret:**
+
+```powershell
+# PowerShell - generates a 64-character random string
+-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object {[char]$_})
+```
+
+```bash
+# Bash - generates a 64-character hex string
+openssl rand -hex 32
+```
+
+**3. Update `.env.local.azure`:**
+
+Replace the placeholder values:
+
+- `GRAPH_CLIENT_SECRET=<GET_FROM_KEY_VAULT>` → paste the value from step 1
+- `WEBHOOK_AUTH_SECRET=<REPLACE_ME>` → paste the value from step 2
+
+Your `.env.local.azure` is now complete with:
+
+- ✅ Application credentials (tenant ID, client ID, client secret)
+- ✅ Event Grid endpoint and key
+- ✅ Application Insights instrumentation key
+- ✅ Key Vault configuration
+- ✅ Storage account details
+- ✅ Webhook authentication secret
+
+#### Security Notes
+
+- **RBAC-Only**: Storage account uses Azure AD authentication only (no access keys)
+- **Key Vault**: All secrets stored in Key Vault with RBAC access control
+- **Managed Identity**: Deployment uses service principal authentication
+- **No Keys in Code**: All credentials loaded from environment variables or Key Vault
+
+---
+
+### AWS Lambda Deployment
+
+The AWS Lambda webhook processor is deployed with Terraform:
+
+```bash
+cd iac/aws
+
+# Configure AWS CLI with profile (recommended)
+aws configure --profile tmf-dev
+
+# Update terraform.tfvars with your AWS configuration
+
+terraform init
+terraform plan
+terraform apply
+```
+
+This creates:
+
+- S3 bucket for webhook payloads
+- Lambda function to process incoming webhooks
+- API Gateway endpoint for webhook delivery
+- IAM roles and policies
+
+After deployment:
+
+```powershell
+./scripts/generate-aws-env.ps1  # PowerShell
+```
+
+```bash
+./scripts/generate-aws-env.sh   # Bash
+```
+
+Test the webhook endpoint:
+
+```powershell
+$body = '{"value":[{"subscriptionId":"test","changeType":"created","resource":"/users/test/events/123"}]}'
+Invoke-WebRequest -Uri "https://<api-gateway-url>/dev/graph" -Method POST -Body $body -ContentType "application/json"
+```
+
+---
+
 ### Production Checklist
 
 - [ ] Create `.env` file with all required variables
@@ -342,6 +531,8 @@ npm run test:watch
 - [ ] Backup database periodically
 - [ ] Plan for subscription renewal (29-day TTL on webhooks)
 - [ ] If using Azure: Review [Infrastructure Terraform Specification](./specs/infrastructure-terraform-spec.md) for security best practices
+- [ ] If using Azure: Grant admin consent for Graph API permissions
+- [ ] If using Azure: Retrieve client secret from Key Vault
 
 ### Recommended: HTTPS via Reverse Proxy
 
