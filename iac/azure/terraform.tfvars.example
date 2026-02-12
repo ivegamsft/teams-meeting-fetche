@@ -1,0 +1,14 @@
+# Example Terraform variables file for Azure deployment
+# Copy to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars with real credentials!
+
+environment      = "dev"
+azure_region     = "eastus"
+region_short     = "eus"
+
+# Azure Service Principal credentials (get from your Azure admin)
+# These values should match the ARM_* environment variables
+azure_subscription_id = "<your-subscription-id>"
+azure_tenant_id       = "<your-tenant-id>"
+azure_client_id       = "<service-principal-client-id>"
+azure_client_secret   = "<service-principal-client-secret>"

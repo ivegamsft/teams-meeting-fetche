@@ -12,3 +12,27 @@ variable "region_short" {
   description = "Short region code for naming (e.g., eus, weu)"
   type        = string
 }
+
+variable "azure_subscription_id" {
+  description = "Azure subscription ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_tenant_id" {
+  description = "Azure AD tenant ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_client_id" {
+  description = "Service principal client ID (application ID)"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_client_secret" {
+  description = "Service principal client secret"
+  type        = string
+  sensitive   = true
+}
