@@ -1,7 +1,32 @@
 // Azure deployment entry point.
 // See specs/infrastructure-terraform-spec.md for the full resource design.
 
-// Resource naming convention: tmf-{resource}-{env}-{region_short}
+// Resource naming convention: {base}-{resource-type}-{region}-{suffix}
+// Base: tmf (Teams Meeting Fetcher)
+// Storage accounts use compact format (no hyphens): {base}{type}{region}{suffix}
+
+// Generate unique deployment suffix
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+  numeric = true
+  lower   = true
+}
+
+// Define naming convention
+locals {
+  base_name = "tmf"
+  suffix    = random_string.suffix.result
+  
+  // Standard naming with hyphens
+  rg_name = "${local.base_name}-rg-${var.region_short}-${local.suffix}"
+  kv_name = "${local.base_name}-kv-${var.region_short}-${local.suffix}"
+  
+  // Storage account: no hyphens, lowercase + numbers only (Azure restriction)
+  // Format: tmfst{region}{suffix} - keeps it under 24 char limit
+  storage_name = "${local.base_name}st${var.region_short}${local.suffix}"
+}
 
 // Get current client config
 data "azurerm_client_config" "current" {}
@@ -10,13 +35,14 @@ data "azurerm_client_config" "current" {}
 data "azuread_client_config" "current" {}
 
 resource "azurerm_resource_group" "main" {
-  name     = "tmf-rg-${var.environment}-${var.region_short}"
+  name     = local.rg_name
   location = var.azure_region
 
   tags = {
     Environment = var.environment
     Project     = "teams-meeting-fetcher"
     ManagedBy   = "terraform"
+    Suffix      = local.suffix
   }
 }
 
@@ -83,13 +109,13 @@ resource "azuread_group" "admins" {
 
 // Key Vault
 resource "azurerm_key_vault" "main" {
-  name                = "tmf-kv-${var.environment}-${var.region_short}"
+  name                = local.kv_name
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   sku_name            = var.key_vault_sku
 
-  enable_rbac_authorization = true
+  enable_rbac_authorization  = true
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
@@ -102,6 +128,7 @@ resource "azurerm_key_vault" "main" {
     Environment = var.environment
     Project     = "teams-meeting-fetcher"
     ManagedBy   = "terraform"
+    Suffix      = local.suffix
   }
 }
 
@@ -130,12 +157,12 @@ resource "azurerm_key_vault_secret" "app_client_secret" {
 
 // Storage Account for webhook payloads
 resource "azurerm_storage_account" "webhook_storage" {
-  name                     = "tmfwebhooks${var.environment}${var.region_short}"
+  name                     = local.storage_name
   resource_group_name      = azurerm_resource_group.main.name
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  
+
   blob_properties {
     versioning_enabled = true
   }
@@ -144,6 +171,7 @@ resource "azurerm_storage_account" "webhook_storage" {
     Environment = var.environment
     Project     = "teams-meeting-fetcher"
     ManagedBy   = "terraform"
+    Suffix      = local.suffix
   }
 }
 

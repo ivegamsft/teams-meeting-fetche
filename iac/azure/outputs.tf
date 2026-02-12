@@ -1,3 +1,8 @@
+output "deployment_suffix" {
+  description = "Unique deployment suffix for resource names"
+  value       = random_string.suffix.result
+}
+
 output "resource_group_name" {
   description = "Resource group name"
   value       = azurerm_resource_group.main.name
