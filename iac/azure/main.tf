@@ -18,11 +18,11 @@ resource "random_string" "suffix" {
 locals {
   base_name = "tmf"
   suffix    = random_string.suffix.result
-  
+
   // Standard naming with hyphens
   rg_name = "${local.base_name}-rg-${var.region_short}-${local.suffix}"
   kv_name = "${local.base_name}-kv-${var.region_short}-${local.suffix}"
-  
+
   // Storage account: no hyphens, lowercase + numbers only (Azure restriction)
   // Format: tmfst{region}{suffix} - keeps it under 24 char limit
   storage_name = "${local.base_name}st${var.region_short}${local.suffix}"
@@ -163,6 +163,9 @@ resource "azurerm_storage_account" "webhook_storage" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
+  # Enforce RBAC-only access (no key-based authentication)
+  shared_access_key_enabled = false
+
   blob_properties {
     versioning_enabled = true
   }
@@ -175,10 +178,19 @@ resource "azurerm_storage_account" "webhook_storage" {
   }
 }
 
+// Grant Storage Blob Data Contributor to deployment SPN for Terraform management
+resource "azurerm_role_assignment" "storage_deployment_spn" {
+  scope                = azurerm_storage_account.webhook_storage.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 resource "azurerm_storage_container" "webhooks" {
   name                  = "webhooks"
   storage_account_name  = azurerm_storage_account.webhook_storage.name
   container_access_type = "private"
+  
+  depends_on = [azurerm_role_assignment.storage_deployment_spn]
 }
 
 // Grant Storage Blob Data Contributor to application service principal
