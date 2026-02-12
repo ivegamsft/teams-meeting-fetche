@@ -113,6 +113,11 @@ output "test_user_principal_name" {
   value       = var.create_test_user ? azuread_user.test_user[0].user_principal_name : null
 }
 
+output "default_domain" {
+  description = "Default verified Azure AD domain"
+  value       = data.azuread_domains.aad_domains.domains[0].domain_name
+}
+
 output "test_user_object_id" {
   description = "Test user object ID"
   value       = var.create_test_user ? azuread_user.test_user[0].object_id : null

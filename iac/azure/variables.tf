@@ -61,9 +61,9 @@ variable "test_user_display_name" {
 }
 
 variable "test_user_principal_name" {
-  description = "User principal name (email) for test user. Must be in format user@domain.onmicrosoft.com"
+  description = "User principal name (email) for test user. If not provided, uses default verified domain with 'tmftestuser' prefix (e.g., tmftestuser@yourtenant.onmicrosoft.com)"
   type        = string
-  default     = ""  # Must be provided if create_test_user = true
+  default     = ""
 }
 
 variable "test_user_password" {

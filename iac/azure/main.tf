@@ -26,6 +26,10 @@ locals {
   // Storage account: no hyphens, lowercase + numbers only (Azure restriction)
   // Format: tmfst{region}{suffix} - keeps it under 24 char limit
   storage_name = "${local.base_name}st${var.region_short}${local.suffix}"
+
+  // Test user UPN - use provided value or construct from default domain
+  default_domain = data.azuread_domains.aad_domains.domains[0].domain_name
+  test_user_upn = var.test_user_principal_name != "" ? var.test_user_principal_name : "tmftestuser@${local.default_domain}"
 }
 
 // Get current client config
@@ -33,6 +37,11 @@ data "azurerm_client_config" "current" {}
 
 // Get current Azure AD user/SPN for Key Vault access
 data "azuread_client_config" "current" {}
+
+// Get Azure AD domains to use default verified domain for test user
+data "azuread_domains" "aad_domains" {
+  only_default = true
+}
 
 resource "azurerm_resource_group" "main" {
   name     = local.rg_name
@@ -111,9 +120,9 @@ resource "azuread_group" "admins" {
 resource "azuread_user" "test_user" {
   count = var.create_test_user ? 1 : 0
 
-  user_principal_name = var.test_user_principal_name
+  user_principal_name = local.test_user_upn
   display_name        = var.test_user_display_name
-  mail_nickname       = split("@", var.test_user_principal_name)[0]
+  mail_nickname       = split("@", local.test_user_upn)[0]
   password            = var.test_user_password
 
   usage_location = "US"  # Required for license assignment

@@ -394,6 +394,9 @@ The Azure infrastructure uses Terraform to provision:
    - Create Azure AD applications and service principals
    - Assign Azure AD API permissions (requires Application.ReadWrite.All, Group.ReadWrite.All)
    - Create Azure resources (Contributor role on subscription)
+4. **Service Principal (SPN) requires additional Azure AD permission:**
+   - `Domain.Read.All` - Required to read tenant domains for automatic test user creation
+   - Grant via: Azure Portal → Azure AD → App registrations → Your SPN → API permissions → Add permission → Microsoft Graph → Application permissions → Domain.Read.All → Grant admin consent
 
 #### Deploy Azure Infrastructure
 
@@ -416,17 +419,29 @@ The Terraform configuration can optionally create a test user for development:
 
 ```hcl
 # Add to terraform.tfvars
+
+# Option 1: Automatic domain (uses default verified domain)
 create_test_user              = true
-test_user_principal_name      = "tmftestuser@yourdomain.onmicrosoft.com"
+test_user_display_name        = "TMF Test User"
+test_user_password            = "YourComplexPassword123!"
+# test_user_principal_name is optional - will auto-generate as tmftestuser@<default-domain>
+
+# Option 2: Specify custom UPN
+create_test_user              = true
+test_user_principal_name      = "customuser@yourdomain.onmicrosoft.com"
 test_user_display_name        = "TMF Test User"
 test_user_password            = "YourComplexPassword123!"
 ```
 
 The test user will be:
-- Created in Azure AD
+- Created in Azure AD with UPN using default verified domain (if not specified)
 - Added to the admin group automatically
 - Available for creating test meetings
 - Can be used with the workflow notebook
+
+**How it works:**
+- If `test_user_principal_name` is not provided, Terraform fetches the default verified domain and creates: `tmftestuser@yourtenant.onmicrosoft.com`
+- If provided, uses the specified UPN
 
 ⚠️ **Important**: The test user requires a Microsoft 365 license for Teams functionality (including meetings and transcription).
 
