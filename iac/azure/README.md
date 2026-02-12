@@ -67,6 +67,53 @@ az role assignment list \
   --output table
 ```
 
+### Grant Azure AD (Entra ID) API Permissions
+
+Your service principal also needs **Microsoft Graph API permissions** to create Azure AD applications and groups:
+
+**Required API Permissions:**
+- `Application.ReadWrite.All` - Create and manage app registrations
+- `Group.ReadWrite.All` - Create and manage groups
+
+**Grant permissions using Azure CLI:**
+
+```bash
+# Replace <service-principal-client-id> with your SPN client ID
+# Microsoft Graph App ID
+GRAPH_APP_ID="00000003-0000-0000-c000-000000000000"
+
+# Add Application.ReadWrite.All permission
+az ad app permission add \
+  --id <service-principal-client-id> \
+  --api $GRAPH_APP_ID \
+  --api-permissions 1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9=Role
+
+# Add Group.ReadWrite.All permission
+az ad app permission add \
+  --id <service-principal-client-id> \
+  --api $GRAPH_APP_ID \
+  --api-permissions 62a82d76-70ea-41e2-9197-370581804d09=Role
+
+# Grant admin consent (requires Global Admin or Privileged Role Admin)
+az ad app permission admin-consent \
+  --id <service-principal-client-id>
+```
+
+**Alternatively, in Azure Portal:**
+1. Navigate to **Azure Active Directory** → **App registrations** → Your SPN
+2. Click **API permissions** → **Add a permission**
+3. Select **Microsoft Graph** → **Application permissions**
+4. Add: `Application.ReadWrite.All` and `Group.ReadWrite.All`
+5. Click **Grant admin consent for [Tenant]**
+
+**Verify permissions:**
+
+```bash
+az ad app permission list \
+  --id <service-principal-client-id> \
+  --output table
+```
+
 ## Setup
 
 ### 1. Configure Credentials
