@@ -4,6 +4,15 @@
 exports.handler = async (event) => {
   const path = event?.rawPath || event?.path || '';
   const method = event?.requestContext?.http?.method || event?.httpMethod || '';
+  const validationToken = event?.queryStringParameters?.validationToken;
+
+  if (validationToken) {
+    return {
+      statusCode: 200,
+      headers: { 'content-type': 'text/plain' },
+      body: validationToken,
+    };
+  }
 
   return {
     statusCode: 200,
@@ -12,7 +21,7 @@ exports.handler = async (event) => {
       ok: true,
       path,
       method,
-      message: 'meeting bot handler placeholder'
-    })
+      message: 'meeting bot handler placeholder',
+    }),
   };
 };

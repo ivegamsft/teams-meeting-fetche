@@ -51,9 +51,9 @@ Failed? → SNS Notification
 | `aws_account_id`              | string | Yes      | AWS account ID                                     |
 | `subscriptions_table_name`    | string | No       | DynamoDB table name (default: graph-subscriptions) |
 | `subscriptions_table_arn`     | string | Yes      | DynamoDB table ARN                                 |
-| `graph_tenant_id`             | string | Yes      | Microsoft Graph tenant ID                          |
-| `graph_client_id`             | string | Yes      | Graph app client ID                                |
-| `graph_client_secret`         | string | Yes      | Graph app client secret                            |
+| `azure_graph_tenant_id`       | string | Yes      | Microsoft Graph tenant ID                          |
+| `azure_graph_client_id`       | string | Yes      | Graph app client ID                                |
+| `azure_graph_client_secret`   | string | Yes      | Graph app client secret                            |
 | `renewal_schedule_expression` | string | No       | Cron expression for schedule (default: 2 AM UTC)   |
 | `lambda_source_file`          | string | No       | Path to renewal-function.py                        |
 | `alarm_actions`               | list   | No       | SNS topic ARNs for alarm notifications             |
@@ -88,9 +88,9 @@ module "subscription_renewal" {
   aws_region               = "us-east-1"
   aws_account_id           = "123456789012"
   subscriptions_table_arn  = module.storage.subscriptions_table_arn
-  graph_tenant_id          = var.graph_tenant_id
-  graph_client_id          = var.graph_client_id
-  graph_client_secret      = var.graph_client_secret
+  azure_graph_tenant_id    = var.azure_graph_tenant_id
+  azure_graph_client_id    = var.azure_graph_client_id
+  azure_graph_client_secret = var.azure_graph_client_secret
   alarm_actions            = [module.notifications.topic_arn]
 }
 ```

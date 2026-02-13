@@ -592,10 +592,10 @@ resource "aws_lambda_function" "meeting_bot" {
 
   environment {
     variables = {
-      GRAPH_TENANT_ID     = var.graph_tenant_id
-      GRAPH_CLIENT_ID     = var.graph_client_id
-      GRAPH_CLIENT_SECRET = var.graph_client_secret
-      BOT_APP_ID          = var.bot_app_id
+      GRAPH_TENANT_ID     = var.azure_graph_tenant_id
+      GRAPH_CLIENT_ID     = var.azure_graph_client_id
+      GRAPH_CLIENT_SECRET = var.azure_graph_client_secret
+      BOT_APP_ID          = var.azure_bot_app_id
       MEETINGS_TABLE      = aws_dynamodb_table.meetings.name
     }
   }

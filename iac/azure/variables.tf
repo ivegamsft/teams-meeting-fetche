@@ -43,10 +43,16 @@ variable "app_display_name" {
   default     = "Teams Meeting Fetcher"
 }
 
-variable "admin_group_display_name" {
-  description = "Display name for the admin group"
+variable "bot_app_display_name" {
+  description = "Display name for the Teams Meeting Bot app registration"
   type        = string
-  default     = "Teams Meeting Fetcher Admins"
+  default     = "Teams Meeting Fetcher Bot"
+}
+
+variable "admin_group_display_name" {
+  description = "Display name for the monitored meetings group"
+  type        = string
+  default     = "Teams Meeting Fetcher Monitored Meetings"
 }
 variable "create_test_user" {
   description = "Whether to create a test user for development with randomly generated name and password"
@@ -58,4 +64,10 @@ variable "key_vault_sku" {
   description = "Key Vault SKU (standard or premium)"
   type        = string
   default     = "standard"
+}
+
+variable "allowed_ip_addresses" {
+  description = "List of IP addresses allowed through Key Vault and Storage firewalls"
+  type        = list(string)
+  default     = []
 }

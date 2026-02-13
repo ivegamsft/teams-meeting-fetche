@@ -78,8 +78,8 @@ resource "aws_iam_role_policy" "meeting_bot_dynamodb_indexes" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["dynamodb:Query"]
+        Effect   = "Allow"
+        Action   = ["dynamodb:Query"]
         Resource = "${aws_dynamodb_table.meeting_bot_sessions.arn}/index/*"
       }
     ]
@@ -98,14 +98,14 @@ resource "aws_lambda_function" "meeting_bot" {
 
   environment {
     variables = {
-      GRAPH_TENANT_ID           = var.azure_graph_tenant_id
-      GRAPH_CLIENT_ID           = var.azure_graph_client_id
-      GRAPH_CLIENT_SECRET       = var.azure_graph_client_secret
-      BOT_APP_ID                = var.azure_bot_app_id
-      BOT_APP_SECRET            = var.azure_bot_app_secret
-      ALLOWED_GROUP_ID          = var.azure_allowed_group_id
-      GROUP_CACHE_TTL_SECONDS   = tostring(var.group_cache_ttl_seconds)
-      MEETINGS_TABLE            = aws_dynamodb_table.meeting_bot_sessions.name
+      GRAPH_TENANT_ID         = var.azure_graph_tenant_id
+      GRAPH_CLIENT_ID         = var.azure_graph_client_id
+      GRAPH_CLIENT_SECRET     = var.azure_graph_client_secret
+      BOT_APP_ID              = var.azure_bot_app_id
+      BOT_APP_SECRET          = var.azure_bot_app_secret
+      ALLOWED_GROUP_ID        = var.azure_allowed_group_id
+      GROUP_CACHE_TTL_SECONDS = tostring(var.group_cache_ttl_seconds)
+      MEETINGS_TABLE          = aws_dynamodb_table.meeting_bot_sessions.name
     }
   }
 
@@ -121,6 +121,6 @@ resource "aws_lambda_function" "meeting_bot" {
 
 data "archive_file" "meeting_bot_zip" {
   type        = "zip"
-  source_file = "${path.root}/../lambda/meeting-bot/index.js"
+  source_file = "${path.root}/../../lambda/meeting-bot/index.js"
   output_path = "${path.module}/.build/meeting-bot.zip"
 }

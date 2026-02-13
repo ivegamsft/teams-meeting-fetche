@@ -18,6 +18,13 @@ azure_client_secret   = "<service-principal-client-secret>"
 # and a secure password (using random_password) for the test user
 create_test_user = true
 
+# Bot App Display Name (optional)
+bot_app_display_name = "Teams Meeting Fetcher Bot"
+
+# Firewall allowlist (required for Key Vault and Storage access)
+# Example: allowed_ip_addresses = ["203.0.113.10", "198.51.100.25"]
+allowed_ip_addresses = []
+
 # Note: Test user requires Domain.Read.All permission on the deployment SPN
 # to automatically fetch the default domain. Run scripts/bootstrap-azure-spn.ps1
 # or scripts/bootstrap-azure-spn.sh to set up the SPN with all required permissions.

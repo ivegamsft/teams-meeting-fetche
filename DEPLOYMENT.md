@@ -12,10 +12,10 @@
 Update `iac/aws/terraform.tfvars` with your Azure credentials:
 
 ```hcl
-# Azure Graph API credentials (for subscription renewal Lambda)
-graph_tenant_id     = "YOUR_TENANT_ID"        # From: az account list
-graph_client_id     = "YOUR_CLIENT_ID"        # Your app registration ID
-graph_client_secret = "YOUR_CLIENT_SECRET"    # From Azure Entra ID
+# Azure Graph API credentials (from Azure IaC outputs)
+azure_graph_tenant_id     = "<terraform output app_tenant_id>"
+azure_graph_client_id     = "<terraform output app_client_id>"
+azure_graph_client_secret = "<terraform output app_client_secret>"
 renewal_schedule_expression = "cron(0 2 * * ? *)"  # 2 AM UTC daily
 ```
 

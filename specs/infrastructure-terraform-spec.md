@@ -97,7 +97,7 @@ VNet: 10.0.0.0/16
 │       NSG: Allow inbound from ContainerApps & Integration subnets
 │
 ├── Integration Subnet: 10.0.3.0/24 (250 IPs)
-│   └── Used by: Future service integrations, admins
+│   └── Used by: Future service integrations, operators
 │       NSG: Allow outbound to Private Endpoints & Azure services
 │
 └── Bastion Subnet: 10.0.4.0/26 (62 IPs) [OPTIONAL]

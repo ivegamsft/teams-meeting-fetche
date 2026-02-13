@@ -53,10 +53,6 @@ data "azuread_domains" "aad_domains" {
   only_default = true
 }
 
-// Get current public IP for firewall rules
-data "http" "current_ip" {
-  url = "https://api.ipify.org?format=text"
-}
 
 //=============================================================================
 // LOCAL VALUES
@@ -108,6 +104,7 @@ module "azure_ad" {
 
   environment              = var.environment
   app_display_name         = var.app_display_name
+  bot_app_display_name     = var.bot_app_display_name
   admin_group_display_name = var.admin_group_display_name
 
   // Test user configuration
@@ -131,7 +128,7 @@ module "key_vault" {
   resource_group_name     = azurerm_resource_group.main.name
   tenant_id               = data.azurerm_client_config.current.tenant_id
   sku_name                = var.key_vault_sku
-  allowed_ip_addresses    = [data.http.current_ip.response_body]
+  allowed_ip_addresses    = var.allowed_ip_addresses
   deployment_principal_id = data.azurerm_client_config.current.object_id
   app_principal_id        = module.azure_ad.service_principal_object_id
 
@@ -155,7 +152,7 @@ module "storage" {
   storage_account_name    = local.storage_name
   resource_group_name     = azurerm_resource_group.main.name
   location                = azurerm_resource_group.main.location
-  allowed_ip_addresses    = [data.http.current_ip.response_body]
+  allowed_ip_addresses    = var.allowed_ip_addresses
   deployment_principal_id = data.azurerm_client_config.current.object_id
   app_principal_id        = module.azure_ad.service_principal_object_id
 

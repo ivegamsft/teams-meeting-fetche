@@ -34,6 +34,20 @@ locals {
       if role.value == "User.Read.All" && contains(role.allowed_member_types, "Application")
     ])
   }
+
+  bot_graph_app_role_ids = {
+    online_meetings_readwrite_all = local.graph_app_role_ids.online_meetings_readwrite_all
+    group_read_all                = local.graph_app_role_ids.group_read_all
+    user_read_all                 = local.graph_app_role_ids.user_read_all
+    calls_join_group_call_all = one([
+      for role in data.azuread_service_principal.graph.app_roles : role.id
+      if role.value == "Calls.JoinGroupCall.All" && contains(role.allowed_member_types, "Application")
+    ])
+    calls_initiate_all = one([
+      for role in data.azuread_service_principal.graph.app_roles : role.id
+      if role.value == "Calls.Initiate.All" && contains(role.allowed_member_types, "Application")
+    ])
+  }
 }
 
 // Azure AD Application
@@ -70,9 +84,43 @@ resource "azuread_application" "tmf_app" {
   }
 }
 
+// Azure AD Application - Teams Meeting Bot
+resource "azuread_application" "tmf_bot_app" {
+  display_name = var.bot_app_display_name
+
+  required_resource_access {
+    resource_app_id = data.azuread_service_principal.graph.client_id
+
+    resource_access {
+      id   = local.bot_graph_app_role_ids.online_meetings_readwrite_all
+      type = "Role"
+    }
+    resource_access {
+      id   = local.bot_graph_app_role_ids.calls_join_group_call_all
+      type = "Role"
+    }
+    resource_access {
+      id   = local.bot_graph_app_role_ids.calls_initiate_all
+      type = "Role"
+    }
+    resource_access {
+      id   = local.bot_graph_app_role_ids.group_read_all
+      type = "Role"
+    }
+    resource_access {
+      id   = local.bot_graph_app_role_ids.user_read_all
+      type = "Role"
+    }
+  }
+}
+
 // Service Principal for the application
 resource "azuread_service_principal" "tmf_app" {
   client_id = azuread_application.tmf_app.client_id
+}
+
+resource "azuread_service_principal" "tmf_bot_app" {
+  client_id = azuread_application.tmf_bot_app.client_id
 }
 
 resource "azuread_app_role_assignment" "graph_app_roles" {
@@ -83,9 +131,21 @@ resource "azuread_app_role_assignment" "graph_app_roles" {
   resource_object_id  = data.azuread_service_principal.graph.object_id
 }
 
+resource "azuread_app_role_assignment" "bot_graph_app_roles" {
+  for_each = local.bot_graph_app_role_ids
+
+  app_role_id         = each.value
+  principal_object_id = azuread_service_principal.tmf_bot_app.object_id
+  resource_object_id  = data.azuread_service_principal.graph.object_id
+}
+
 // Application password/secret
 resource "azuread_application_password" "tmf_app" {
   application_id = azuread_application.tmf_app.id
+}
+
+resource "azuread_application_password" "tmf_bot_app" {
+  application_id = azuread_application.tmf_bot_app.id
 }
 
 // Admin group for application administrators

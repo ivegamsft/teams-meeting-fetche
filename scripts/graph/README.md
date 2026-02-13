@@ -22,6 +22,7 @@
 
 - **recreate-transcript-subscription.py** - Recreate transcript webhook subscription
 - **create_transcript_subscription.py** - Create transcript subscription (similar to 02, for transcripts only)
+- **create-meeting-started-subscription.py** - Create meeting-started subscription for the bot API
 
 ## Debugging (Optional)
 

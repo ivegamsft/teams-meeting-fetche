@@ -14,9 +14,25 @@ output "app_client_secret" {
   sensitive   = true
 }
 
+output "bot_app_client_id" {
+  description = "Bot application (client) ID"
+  value       = azuread_application.tmf_bot_app.client_id
+}
+
+output "bot_app_client_secret" {
+  description = "Bot application client secret"
+  value       = azuread_application_password.tmf_bot_app.value
+  sensitive   = true
+}
+
 output "service_principal_object_id" {
   description = "Service principal object ID"
   value       = azuread_service_principal.tmf_app.object_id
+}
+
+output "bot_service_principal_object_id" {
+  description = "Bot service principal object ID"
+  value       = azuread_service_principal.tmf_bot_app.object_id
 }
 
 output "admin_group_id" {

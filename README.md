@@ -407,6 +407,7 @@ cd iac/azure
 
 # Copy terraform.tfvars.example to terraform.tfvars
 # Update with your subscription ID, tenant ID, and service principal credentials
+# Add your public IPs to allowed_ip_addresses for Key Vault and Storage firewall access
 
 terraform init
 terraform plan
@@ -438,7 +439,7 @@ test_user_password            = "YourComplexPassword123!"
 The test user will be:
 
 - Created in Azure AD with UPN using default verified domain (if not specified)
-- Added to the admin group automatically
+- Added to the monitored meetings group automatically
 - Available for creating test meetings
 - Can be used with the workflow notebook
 

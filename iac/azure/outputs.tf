@@ -24,6 +24,23 @@ output "app_client_id" {
   value       = module.azure_ad.app_client_id
 }
 
+output "app_client_secret" {
+  description = "Application client secret"
+  value       = module.azure_ad.app_client_secret
+  sensitive   = true
+}
+
+output "bot_app_client_id" {
+  description = "Bot application (client) ID"
+  value       = module.azure_ad.bot_app_client_id
+}
+
+output "bot_app_client_secret" {
+  description = "Bot application client secret"
+  value       = module.azure_ad.bot_app_client_secret
+  sensitive   = true
+}
+
 output "app_object_id" {
   description = "Object ID of the application"
   value       = module.azure_ad.app_object_id
@@ -37,6 +54,11 @@ output "app_tenant_id" {
 output "service_principal_object_id" {
   description = "Object ID of the service principal"
   value       = module.azure_ad.service_principal_object_id
+}
+
+output "bot_service_principal_object_id" {
+  description = "Bot service principal object ID"
+  value       = module.azure_ad.bot_service_principal_object_id
 }
 
 output "admin_group_id" {

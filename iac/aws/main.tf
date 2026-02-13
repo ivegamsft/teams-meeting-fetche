@@ -128,19 +128,19 @@ module "api_gateway" {
 module "meeting_bot" {
   source = "./modules/meeting-bot"
 
-  function_name           = "tmf-meeting-bot-${var.environment}"
-  handler                 = "index.handler"
-  runtime                 = "nodejs18.x"
-  timeout                 = 300
-  memory_size             = 512
-  meetings_table_name     = "meeting-bot-sessions-${var.environment}"
-  azure_graph_tenant_id   = var.azure_graph_tenant_id
-  azure_graph_client_id   = var.azure_graph_client_id
+  function_name             = "tmf-meeting-bot-${var.environment}"
+  handler                   = "index.handler"
+  runtime                   = "nodejs18.x"
+  timeout                   = 300
+  memory_size               = 512
+  meetings_table_name       = "meeting-bot-sessions-${var.environment}"
+  azure_graph_tenant_id     = var.azure_graph_tenant_id
+  azure_graph_client_id     = var.azure_graph_client_id
   azure_graph_client_secret = var.azure_graph_client_secret
-  azure_bot_app_id        = var.azure_bot_app_id
-  azure_bot_app_secret    = var.azure_bot_app_secret
-  azure_allowed_group_id  = var.azure_allowed_group_id
-  group_cache_ttl_seconds = var.group_cache_ttl_seconds
+  azure_bot_app_id          = var.azure_bot_app_id
+  azure_bot_app_secret      = var.azure_bot_app_secret
+  azure_allowed_group_id    = var.azure_allowed_group_id
+  group_cache_ttl_seconds   = var.group_cache_ttl_seconds
 
   tags = local.common_tags
 }

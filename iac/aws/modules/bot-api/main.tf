@@ -51,7 +51,7 @@ resource "aws_api_gateway_integration" "meeting_started_integration" {
   http_method             = aws_api_gateway_method.meeting_started_post.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = var.lambda_invoke_arn
+  uri                     = "arn:aws:apigateway:${data.aws_region.current.id}:lambda:path/2015-03-31/functions/${var.lambda_invoke_arn}/invocations"
 }
 
 resource "aws_api_gateway_integration" "callbacks_integration" {
@@ -60,7 +60,7 @@ resource "aws_api_gateway_integration" "callbacks_integration" {
   http_method             = aws_api_gateway_method.callbacks_post.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = var.lambda_invoke_arn
+  uri                     = "arn:aws:apigateway:${data.aws_region.current.id}:lambda:path/2015-03-31/functions/${var.lambda_invoke_arn}/invocations"
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke" {

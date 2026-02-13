@@ -8,8 +8,13 @@ variable "app_display_name" {
   type        = string
 }
 
+variable "bot_app_display_name" {
+  description = "Display name for the Teams Meeting Bot app registration"
+  type        = string
+}
+
 variable "admin_group_display_name" {
-  description = "Display name for the admin group"
+  description = "Display name for the monitored meetings group"
   type        = string
 }
 

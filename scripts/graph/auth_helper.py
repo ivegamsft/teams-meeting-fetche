@@ -67,5 +67,7 @@ def get_config():
         'client_secret': os.getenv('GRAPH_CLIENT_SECRET'),
         'group_id': os.getenv('ENTRA_GROUP_ID'),
         'webhook_url': os.getenv('AWS_WEBHOOK_ENDPOINT') or os.getenv('AZURE_WEBHOOK_ENDPOINT'),
-        'webhook_secret': os.getenv('WEBHOOK_AUTH_SECRET')
+        'webhook_secret': os.getenv('WEBHOOK_AUTH_SECRET'),
+        'bot_meeting_started_url': os.getenv('BOT_MEETING_STARTED_URL'),
+        'bot_callbacks_url': os.getenv('BOT_CALLBACKS_URL')
     }
