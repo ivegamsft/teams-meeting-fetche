@@ -48,6 +48,9 @@ tfplan
 tfplan.json
 *.out
 
+# Terraform module build artifacts
+**/.build/
+
 # IDE / Editor
 .vscode/
 .idea/
