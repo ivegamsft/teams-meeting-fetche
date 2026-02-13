@@ -1,6 +1,6 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
-  "version": "1.0.7-dev",
+  "version": "1.0.8-dev",
   "manifestVersion": "1.25",
   "id": "26464cb0-4c2c-4e0f-9a5d-de53b1234567",
   "developer": {
@@ -27,7 +27,7 @@
   "defaultInstallScope": "meetings",
   "defaultGroupCapability": {
     "team": "bot",
-    "groupChat": "bot",
+    "groupchat": "bot",
     "meetings": "tab"
   },
   "webApplicationInfo": {
@@ -65,7 +65,6 @@
       "scopes": ["team", "groupChat"],
       "supportsFiles": false,
       "isNotificationOnly": false,
-      "supportsChannelFeatures": true,
       "commandLists": [
         {
           "scopes": ["team", "groupChat"],

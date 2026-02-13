@@ -313,23 +313,29 @@ async function fetchTranscript(meetingId, session) {
 // ─── Message handler (Hi/Hello/Help) ─────────────────────────────────────────
 
 async function handleMessage(activity) {
-  const text = (activity.text || '').replace(/<[^>]+>/g, '').trim().toLowerCase();
+  const text = (activity.text || '')
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .toLowerCase();
   const serviceUrl = activity.serviceUrl || '';
   const conversationId = activity.conversation?.id || '';
   const activityId = activity.id || '';
 
   let reply;
   if (['hi', 'hello', 'hey'].includes(text)) {
-    reply = '👋 Hello! I\'m **Meeting Fetcher** — I automatically record and transcribe your meetings.\n\n' +
-      'When a meeting starts, I\'ll post a recording notice. When it ends, I\'ll fetch the transcript and share it here.';
+    reply =
+      "👋 Hello! I'm **Meeting Fetcher** — I automatically record and transcribe your meetings.\n\n" +
+      "When a meeting starts, I'll post a recording notice. When it ends, I'll fetch the transcript and share it here.";
   } else if (['help', '?'].includes(text)) {
-    reply = '📋 **Meeting Fetcher Help**\n\n' +
+    reply =
+      '📋 **Meeting Fetcher Help**\n\n' +
       '• **Hi / Hello** — Get a greeting\n' +
       '• **Help** — Show this help message\n\n' +
       'I work automatically — no commands needed. When a meeting starts, I send a recording notice. ' +
       'When it ends, I fetch and post the transcript.';
   } else {
-    reply = 'I\'m **Meeting Fetcher** — I handle meeting recording and transcription automatically. ' +
+    reply =
+      "I'm **Meeting Fetcher** — I handle meeting recording and transcription automatically. " +
       'Type **Help** to learn more.';
   }
 
@@ -364,8 +370,9 @@ async function handleConversationUpdate(activity) {
   const conversationId = activity.conversation?.id || '';
 
   // Send welcome message
-  const welcome = '👋 **Meeting Fetcher** has been added!\n\n' +
-    'I\'ll automatically notify when meetings are being recorded and post transcripts when they end.\n\n' +
+  const welcome =
+    '👋 **Meeting Fetcher** has been added!\n\n' +
+    "I'll automatically notify when meetings are being recorded and post transcripts when they end.\n\n" +
     'Type **Help** for more info.';
   try {
     await graph.sendBotMessage(serviceUrl, conversationId, welcome);
