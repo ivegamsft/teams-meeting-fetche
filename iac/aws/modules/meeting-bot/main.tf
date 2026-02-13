@@ -121,6 +121,19 @@ resource "aws_lambda_function" "meeting_bot" {
 
 data "archive_file" "meeting_bot_zip" {
   type        = "zip"
-  source_file = "${path.root}/../../lambda/meeting-bot/index.js"
+  source_dir  = "${path.root}/../../lambda/meeting-bot"
   output_path = "${path.module}/.build/meeting-bot.zip"
+  
+  excludes = [".git", ".gitignore", "package-lock.json"]
+}
+// Lambda Function URL for direct webhook invocation (no API Gateway)
+resource "aws_lambda_function_url" "meeting_bot_webhook" {
+  function_name          = aws_lambda_function.meeting_bot.function_name
+  authorization_type    = "NONE"
+  cors {
+    allow_origins = ["*"]
+    allow_methods = ["POST", "GET"]
+    allow_headers = ["*"]
+    max_age       = 86400
+  }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "teams-meeting-fetcher-meeting-bot",
+  "version": "1.0.0",
+  "description": "Meeting bot webhook handler for Teams Meeting Fetcher",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1600.0"
+  }
+}

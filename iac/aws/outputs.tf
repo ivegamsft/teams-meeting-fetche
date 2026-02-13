@@ -123,6 +123,11 @@ output "meeting_bot_function_arn" {
   value       = module.meeting_bot.function_arn
 }
 
+output "meeting_bot_webhook_url" {
+  description = "Direct Lambda Function URL for Graph webhook notifications"
+  value       = module.meeting_bot.webhook_url
+}
+
 output "meeting_bot_table_name" {
   description = "Meeting bot DynamoDB table name"
   value       = module.meeting_bot.meetings_table_name
