@@ -117,8 +117,8 @@ def enable_meeting_transcript(online_meeting_id):
     url = f"https://graph.microsoft.com/v1.0/communications/onlineMeetings/{online_meeting_id}"
     
     payload = {
-        "recordAutomatically": True,  # Auto-record when meeting starts
-        "allowTranscription": True     # Enable transcription
+        "allowTranscription": True,    # Enable transcription
+        "recordAutomatically": False   # Don't auto-record, organizer will start manually
     }
     
     try:
@@ -132,8 +132,12 @@ def enable_meeting_transcript(online_meeting_id):
             print("   ⚠️  Insufficient permissions to enable transcript")
             print("      Requires OnlineMeetings.ReadWrite.All permission")
             return False
+        elif response.status_code == 404:
+            print("   ⚠️  Online meeting not found - ID may not be accessible via this API")
+            return False
         else:
             print(f"   ⚠️  Could not enable transcript: {response.status_code}")
+            print(f"      {response.text[:200]}")
             return False
     except Exception as e:
         print(f"   ⚠️  Error enabling transcript: {e}")

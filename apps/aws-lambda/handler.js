@@ -8,7 +8,7 @@ exports.handler = async (event, context) => {
   const method = event && event.httpMethod ? event.httpMethod.toUpperCase() : '';
   const queryParams = event && event.queryStringParameters ? event.queryStringParameters : {};
 
-  if (method === 'GET' && queryParams.validationToken) {
+  if (queryParams.validationToken) {
     return {
       statusCode: 200,
       headers: {

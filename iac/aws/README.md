@@ -20,6 +20,7 @@ Notes:
 
 - API Gateway exposes `POST /graph` for Graph webhook delivery.
 - Lambda package is built from [apps/aws-lambda](../../apps/aws-lambda).
+- POST requests are unauthenticated; the Lambda handler enforces `clientState` for webhook security.
 
 Generate local environment file after apply:
 

@@ -23,7 +23,7 @@ resource "aws_api_gateway_authorizer" "lambda_authorizer" {
   rest_api_id     = aws_api_gateway_rest_api.api.id
   authorizer_uri  = var.authorizer_invoke_arn
   type            = "REQUEST"
-  identity_source = "method.request.header.Content-Type,method.request.querystring.validationToken"
+  identity_source = "method.request.header.Content-Type"
 
   # Don't cache authorization results for webhook callbacks
   authorizer_result_ttl_in_seconds = 0
@@ -42,8 +42,7 @@ resource "aws_api_gateway_method" "method" {
   rest_api_id   = aws_api_gateway_rest_api.api.id
   resource_id   = aws_api_gateway_resource.resource.id
   http_method   = var.http_method
-  authorization = "CUSTOM"
-  authorizer_id = aws_api_gateway_authorizer.lambda_authorizer.id
+  authorization = "NONE"
 }
 
 resource "aws_api_gateway_method" "get_method" {
@@ -81,7 +80,6 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
 
 resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = var.stage_name
 
   triggers = {
     redeployment = sha1(jsonencode({
@@ -110,4 +108,12 @@ resource "aws_api_gateway_deployment" "deployment" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_api_gateway_stage" "stage" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  deployment_id = aws_api_gateway_deployment.deployment.id
+  stage_name    = var.stage_name
+
+  tags = var.tags
 }

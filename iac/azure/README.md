@@ -70,12 +70,13 @@ az role assignment list \
 
 ### Grant Azure AD (Entra ID) API Permissions
 
-Your service principal also needs **Microsoft Graph API permissions** to create Azure AD applications and groups:
+Your **Terraform identity** (user or SPN) needs Microsoft Graph permissions to manage app registrations, groups, and app role assignments.
 
-**Required API Permissions:**
+**Required API Permissions (for the identity running Terraform):**
 
 - `Application.ReadWrite.All` - Create and manage app registrations
 - `Group.ReadWrite.All` - Create and manage groups
+- `AppRoleAssignment.ReadWrite.All` - Assign Microsoft Graph app roles to the app
 
 **Grant permissions using Azure CLI:**
 
@@ -96,6 +97,12 @@ az ad app permission add \
   --api $GRAPH_APP_ID \
   --api-permissions 62a82d76-70ea-41e2-9197-370581804d09=Role
 
+# Add AppRoleAssignment.ReadWrite.All permission
+az ad app permission add \
+  --id <service-principal-client-id> \
+  --api $GRAPH_APP_ID \
+  --api-permissions 06b708a9-e830-4db3-a914-8e69da51d44f=Role
+
 # Grant admin consent (requires Global Admin or Privileged Role Admin)
 az ad app permission admin-consent \
   --id <service-principal-client-id>
@@ -106,8 +113,20 @@ az ad app permission admin-consent \
 1. Navigate to **Azure Active Directory** → **App registrations** → Your SPN
 2. Click **API permissions** → **Add a permission**
 3. Select **Microsoft Graph** → **Application permissions**
-4. Add: `Application.ReadWrite.All` and `Group.ReadWrite.All`
+4. Add: `Application.ReadWrite.All`, `Group.ReadWrite.All`, `AppRoleAssignment.ReadWrite.All`
 5. Click **Grant admin consent for [Tenant]**
+
+**Terraform-managed Graph permissions for the Teams Meeting Fetcher app:**
+
+The Azure AD module assigns Microsoft Graph **application permissions** to the app registration:
+
+- `Calendars.ReadWrite` - Read/write user calendars to create meetings
+- `OnlineMeetingTranscript.Read.All` - Access meeting transcripts via change notifications
+- `OnlineMeetingRecording.Read.All` - Access meeting recordings via change notifications
+- `Group.Read.All` - Read group information
+- `User.Read.All` - Read user profiles
+
+These are applied via app role assignments and require the Terraform identity permissions above.
 
 **Verify permissions:**
 

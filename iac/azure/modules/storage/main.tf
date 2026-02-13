@@ -8,6 +8,9 @@ resource "azurerm_storage_account" "main" {
   account_tier             = var.account_tier
   account_replication_type = var.replication_type
 
+  allow_nested_items_to_be_public  = false
+  cross_tenant_replication_enabled = true
+
   // Enforce RBAC-only access (no key-based authentication)
   shared_access_key_enabled     = false
   public_network_access_enabled = true
@@ -37,7 +40,7 @@ resource "azurerm_storage_container" "containers" {
   for_each = toset(var.container_names)
 
   name                  = each.value
-  storage_account_name  = azurerm_storage_account.main.name
+  storage_account_id    = azurerm_storage_account.main.id
   container_access_type = "private"
 
   depends_on = [azurerm_role_assignment.deployment_storage]

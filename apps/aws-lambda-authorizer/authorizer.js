@@ -24,42 +24,10 @@ exports.handler = async (event) => {
       return generatePolicy('user', 'Allow', event.methodArn);
     }
 
-    // CASE 2: POST request - validate clientState in body
-    if (method === 'POST' || event.body) {
-      // Parse body if it exists
-      let body = {};
-      if (event.body) {
-        try {
-          body = JSON.parse(event.body);
-        } catch (e) {
-          console.log('Failed to parse body:', e);
-          return generatePolicy('user', 'Deny', event.methodArn);
-        }
-      }
-
-      // Check for clientState in notification
-      // Graph sends: { value: [{ clientState: "...", ... }] }
-      const notifications = body.value || [];
-
-      if (notifications.length === 0) {
-        console.log('No notifications in body, denying');
-        return generatePolicy('user', 'Deny', event.methodArn);
-      }
-
-      // Validate clientState for all notifications
-      const allValid = notifications.every((notification) => {
-        const clientState = notification.clientState;
-        console.log('Checking clientState:', clientState === expectedClientState);
-        return clientState === expectedClientState;
-      });
-
-      if (allValid) {
-        console.log('All notifications have valid clientState, allowing');
-        return generatePolicy('user', 'Allow', event.methodArn);
-      } else {
-        console.log('Invalid clientState, denying');
-        return generatePolicy('user', 'Deny', event.methodArn);
-      }
+    // CASE 2: POST request - allow and let the handler enforce clientState
+    if (method === 'POST') {
+      console.log('POST request detected, allowing (handler will validate clientState)');
+      return generatePolicy('user', 'Allow', event.methodArn);
     }
 
     // Default: deny any other request type

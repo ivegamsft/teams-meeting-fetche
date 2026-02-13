@@ -21,7 +21,7 @@ output "service_principal_object_id" {
 
 output "admin_group_id" {
   description = "Admin group object ID"
-  value       = azuread_group.admins.id
+  value       = azuread_group.admins.object_id
 }
 
 output "admin_group_name" {
