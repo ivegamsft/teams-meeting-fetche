@@ -181,6 +181,9 @@ module "monitoring" {
 // AZURE BOT SERVICE - Bot Framework registration + Teams channel
 //=============================================================================
 
+// Bot Service stays SingleTenant — Azure deprecated MultiTenant bot creation.
+// The Azure AD app registration (sign_in_audience = AzureADMultipleOrgs) is what
+// Teams Admin Center validates. See modules/azure-ad/main.tf for details.
 resource "azurerm_bot_service_azure_bot" "meeting_bot" {
   name                    = "${local.base_name}-bot-${var.region_short}-${local.suffix}"
   resource_group_name     = azurerm_resource_group.main.name

@@ -87,8 +87,14 @@ resource "azuread_application" "tmf_app" {
 }
 
 // Azure AD Application - Teams Meeting Bot
+// sign_in_audience must be "AzureADMultipleOrgs" — Teams Admin Center
+// validation requires the bot's Azure AD app to be multi-tenant.
+// The Bot Service resource itself remains SingleTenant (Azure deprecated
+// MultiTenant bot creation). Access is restricted by ALLOWED_GROUP_ID,
+// Teams admin policies, and the org app catalog.
 resource "azuread_application" "tmf_bot_app" {
-  display_name = var.bot_app_display_name
+  display_name     = var.bot_app_display_name
+  sign_in_audience = "AzureADMultipleOrgs"
 
   required_resource_access {
     resource_app_id = data.azuread_service_principal.graph.client_id
