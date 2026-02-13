@@ -100,9 +100,9 @@ exports.handler = async (event) => {
         return respond(200, { ok: true, note: 'empty activity' });
       }
 
-      // Notification-only bot – ignore user messages
+      // Handle user messages (Hi, Hello, Help)
       if (body.type === 'message') {
-        return respond(200, { ok: true });
+        return handleMessage(body);
       }
 
       // Meeting lifecycle events
@@ -310,6 +310,43 @@ async function fetchTranscript(meetingId, session) {
   return content;
 }
 
+// ─── Message handler (Hi/Hello/Help) ─────────────────────────────────────────
+
+async function handleMessage(activity) {
+  const text = (activity.text || '').replace(/<[^>]+>/g, '').trim().toLowerCase();
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+  const activityId = activity.id || '';
+
+  let reply;
+  if (['hi', 'hello', 'hey'].includes(text)) {
+    reply = '👋 Hello! I\'m **Meeting Fetcher** — I automatically record and transcribe your meetings.\n\n' +
+      'When a meeting starts, I\'ll post a recording notice. When it ends, I\'ll fetch the transcript and share it here.';
+  } else if (['help', '?'].includes(text)) {
+    reply = '📋 **Meeting Fetcher Help**\n\n' +
+      '• **Hi / Hello** — Get a greeting\n' +
+      '• **Help** — Show this help message\n\n' +
+      'I work automatically — no commands needed. When a meeting starts, I send a recording notice. ' +
+      'When it ends, I fetch and post the transcript.';
+  } else {
+    reply = 'I\'m **Meeting Fetcher** — I handle meeting recording and transcription automatically. ' +
+      'Type **Help** to learn more.';
+  }
+
+  try {
+    if (activityId) {
+      await graph.replyToActivity(serviceUrl, conversationId, activityId, reply);
+    } else {
+      await graph.sendBotMessage(serviceUrl, conversationId, reply);
+    }
+    console.log('✅ Replied to message');
+  } catch (err) {
+    console.error(`❌ Failed to reply: ${err.message}`);
+  }
+
+  return respond(200, { ok: true });
+}
+
 // ─── Bot added to meeting/chat ───────────────────────────────────────────────
 
 async function handleConversationUpdate(activity) {
@@ -325,6 +362,17 @@ async function handleConversationUpdate(activity) {
   console.log('🤖 Bot was added to conversation');
   const serviceUrl = activity.serviceUrl || '';
   const conversationId = activity.conversation?.id || '';
+
+  // Send welcome message
+  const welcome = '👋 **Meeting Fetcher** has been added!\n\n' +
+    'I\'ll automatically notify when meetings are being recorded and post transcripts when they end.\n\n' +
+    'Type **Help** for more info.';
+  try {
+    await graph.sendBotMessage(serviceUrl, conversationId, welcome);
+    console.log('✅ Welcome message sent');
+  } catch (err) {
+    console.error(`❌ Failed to send welcome: ${err.message}`);
+  }
 
   // If this is a meeting chat, store the conversation for later use
   const meeting = activity.channelData?.meeting;
