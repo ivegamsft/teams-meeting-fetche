@@ -95,9 +95,9 @@ exports.handler = async (event) => {
         return respond(200, { ok: true, note: 'empty activity' });
       }
 
-      // Conversational commands (Hi / Hello / Help)
-      if (body.type === 'message' && body.text) {
-        return handleBotMessage(body);
+      // Notification-only bot – ignore user messages
+      if (body.type === 'message') {
+        return respond(200, { ok: true });
       }
 
       // Meeting lifecycle events
@@ -338,50 +338,6 @@ async function handleConversationUpdate(activity) {
   }
 
   return respond(200, { ok: true, action: 'bot_added' });
-}
-
-// ─── Conversational commands ─────────────────────────────────────────────────
-
-async function handleBotMessage(activity) {
-  const serviceUrl = activity.serviceUrl || '';
-  const conversationId = activity.conversation?.id || '';
-  const activityId = activity.id || '';
-  const rawText = (activity.text || '').trim();
-
-  // Strip the @mention tag (Teams wraps it in <at>BotName</at>)
-  const text = rawText.replace(/<at>[^<]*<\/at>/gi, '').trim();
-  const cmd = text.toLowerCase().replace(/[^a-z]/g, '');
-
-  let replyText;
-  if (cmd === 'help') {
-    replyText =
-      '**Meeting Fetcher Bot** — Commands:\n\n' +
-      '- **Hi** / **Hello** — Say hello\n' +
-      '- **Help** — Show this help message\n\n' +
-      'This bot notifies you when a meeting is being recorded and ' +
-      'posts the transcript when the meeting ends.';
-  } else {
-    replyText =
-      "Hello! I'm the **Meeting Fetcher** bot. " +
-      'I notify when meetings are recorded and deliver transcripts.\n\n' +
-      'Type **Help** for more info.';
-  }
-
-  // Reply via Bot Framework REST API (response body is ignored by Teams)
-  if (serviceUrl && conversationId) {
-    try {
-      if (activityId) {
-        await graph.replyToActivity(serviceUrl, conversationId, activityId, replyText);
-      } else {
-        await graph.sendBotMessage(serviceUrl, conversationId, replyText);
-      }
-      console.log('✅ Replied to message');
-    } catch (err) {
-      console.error(`❌ Failed to reply: ${err.message}`);
-    }
-  }
-
-  return respond(200, { ok: true });
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
