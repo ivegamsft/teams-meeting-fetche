@@ -4,7 +4,14 @@
   "private": true,
   "main": "handler.js",
   "license": "MIT",
+  "scripts": {
+    "test": "jest --coverage"
+  },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.744.0"
+    "@aws-sdk/client-s3": "^3.744.0",
+    "aws-sdk": "^2.1600.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }

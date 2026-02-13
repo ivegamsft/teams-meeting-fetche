@@ -1,16 +1,15 @@
 const handler = require('../../../apps/aws-lambda/handler');
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
-// Mock AWS SDK
-jest.mock('aws-sdk', () => {
-  const mockPutObject = jest.fn().mockReturnValue({
-    promise: jest.fn().mockResolvedValue({ ETag: '"mock-etag"' }),
-  });
+// Mock AWS SDK v3
+jest.mock('@aws-sdk/client-s3', () => {
+  const mockSend = jest.fn().mockResolvedValue({ ETag: '"mock-etag"' });
 
   return {
-    S3: jest.fn(() => ({
-      putObject: mockPutObject,
+    S3Client: jest.fn(() => ({
+      send: mockSend,
     })),
+    PutObjectCommand: jest.fn((params) => params),
   };
 });
 
@@ -23,9 +22,10 @@ describe('Lambda Webhook Handler', () => {
     process.env = {
       ...originalEnv,
       BUCKET_NAME: 'test-bucket',
+      CLIENT_STATE: 'test-state',
       AWS_REGION: 'us-east-1',
     };
-    mockS3 = new AWS.S3();
+    mockS3 = new S3Client({});
   });
 
   afterEach(() => {
@@ -35,6 +35,7 @@ describe('Lambda Webhook Handler', () => {
   describe('Successful webhook processing', () => {
     test('should process valid Graph webhook notification', async () => {
       const event = {
+        httpMethod: 'POST',
         body: JSON.stringify({
           value: [
             {
@@ -45,24 +46,17 @@ describe('Lambda Webhook Handler', () => {
             },
           ],
         }),
-        requestContext: {
-          requestId: 'test-request-id',
-        },
+        awsRequestId: 'test-request-id',
       };
 
-      const result = await handler.handler(event, {});
+      const result = await handler.handler(event, { awsRequestId: 'test-request-id' });
 
-      expect(result.statusCode).toBe(200);
-      expect(mockS3.putObject).toHaveBeenCalledWith(
-        expect.objectContaining({
-          Bucket: 'test-bucket',
-          ContentType: 'application/json',
-        })
-      );
+      expect(result.statusCode).toBe(202);
+      expect(mockS3.send).toHaveBeenCalled();
 
       const responseBody = JSON.parse(result.body);
       expect(responseBody.status).toBe('ok');
-      expect(responseBody.key).toMatch(/^webhooks\/\d{4}\/\d{2}\/\d{2}\/graph-webhook/);
+      expect(responseBody.key).toMatch(/^webhooks\/\d{4}-\d{2}-\d{2}/);
     });
 
     test('should handle validation token from Graph subscription setup', async () => {
@@ -77,58 +71,69 @@ describe('Lambda Webhook Handler', () => {
       expect(result.statusCode).toBe(200);
       expect(result.headers['Content-Type']).toBe('text/plain');
       expect(result.body).toBe('test-validation-token-12345');
-      expect(mockS3.putObject).not.toHaveBeenCalled();
+      expect(mockS3.send).not.toHaveBeenCalled();
     });
   });
 
   describe('Error handling', () => {
-    test('should return 400 for empty body', async () => {
+    test('should return 403 for empty body with POST', async () => {
       const event = {
+        httpMethod: 'POST',
         body: null,
-        requestContext: { requestId: 'test-request-id' },
       };
 
-      const result = await handler.handler(event, {});
+      const result = await handler.handler(event, { awsRequestId: 'test-request-id' });
 
-      expect(result.statusCode).toBe(400);
-      expect(mockS3.putObject).not.toHaveBeenCalled();
+      // Empty body means no valid notifications, which is a 403
+      expect(result.statusCode).toBe(403);
+      expect(mockS3.send).not.toHaveBeenCalled();
     });
 
     test('should return 400 for invalid JSON', async () => {
       const event = {
+        httpMethod: 'POST',
         body: '{invalid-json}',
-        requestContext: { requestId: 'test-request-id' },
       };
 
-      const result = await handler.handler(event, {});
+      const result = await handler.handler(event, { awsRequestId: 'test-request-id' });
 
       expect(result.statusCode).toBe(400);
     });
 
-    test('should return 500 when S3 write fails', async () => {
-      mockS3.putObject.mockReturnValueOnce({
-        promise: jest.fn().mockRejectedValue(new Error('S3 Error')),
-      });
-
+    test('should return 403 when clientState does not match', async () => {
       const event = {
-        body: JSON.stringify({ value: [{ subscriptionId: '123' }] }),
-        requestContext: { requestId: 'test-request-id' },
+        httpMethod: 'POST',
+        body: JSON.stringify({
+          value: [
+            {
+              subscriptionId: '123',
+              clientState: 'wrong-state',
+            },
+          ],
+        }),
       };
 
-      const result = await handler.handler(event, {});
+      const result = await handler.handler(event, { awsRequestId: 'test-request-id' });
 
-      expect(result.statusCode).toBe(500);
+      expect(result.statusCode).toBe(403);
     });
 
     test('should return 500 when BUCKET_NAME not set', async () => {
       delete process.env.BUCKET_NAME;
 
       const event = {
-        body: JSON.stringify({ value: [{ subscriptionId: '123' }] }),
-        requestContext: { requestId: 'test-request-id' },
+        httpMethod: 'POST',
+        body: JSON.stringify({
+          value: [
+            {
+              subscriptionId: '123',
+              clientState: 'test-state',
+            },
+          ],
+        }),
       };
 
-      const result = await handler.handler(event, {});
+      const result = await handler.handler(event, { awsRequestId: 'test-request-id' });
 
       expect(result.statusCode).toBe(500);
       expect(result.body).toContain('BUCKET_NAME');
@@ -142,14 +147,21 @@ describe('Lambda Webhook Handler', () => {
       jest.setSystemTime(testTime);
 
       const event = {
-        body: JSON.stringify({ value: [{ subscriptionId: '123' }] }),
-        requestContext: { requestId: 'req-123' },
+        httpMethod: 'POST',
+        body: JSON.stringify({
+          value: [
+            {
+              subscriptionId: '123',
+              clientState: 'test-state',
+            },
+          ],
+        }),
       };
 
-      await handler.handler(event, {});
+      await handler.handler(event, { awsRequestId: 'req-123' });
 
-      const putObjectCall = mockS3.putObject.mock.calls[0][0];
-      const savedPayload = JSON.parse(putObjectCall.Body);
+      const sendCall = mockS3.send.mock.calls[0][0];
+      const savedPayload = JSON.parse(sendCall.Body);
 
       expect(savedPayload).toHaveProperty('receivedAt');
       expect(savedPayload).toHaveProperty('requestId', 'req-123');
