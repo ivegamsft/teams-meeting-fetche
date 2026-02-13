@@ -193,11 +193,49 @@ async function isUserInGroup(userId, groupId) {
   }
 }
 
+/**
+ * Reply to a specific activity in a conversation.
+ * This is the proper way to respond to a user message in Teams.
+ */
+async function replyToActivity(serviceUrl, conversationId, activityId, text) {
+  const token = await getBotFrameworkToken();
+  const url = `${serviceUrl}v3/conversations/${conversationId}/activities/${activityId}`;
+
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const options = {
+      hostname: parsed.hostname,
+      path: parsed.pathname,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    };
+    const body = { type: 'message', text };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data ? JSON.parse(data) : {});
+        } else {
+          reject(new Error(`replyToActivity failed: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
 module.exports = {
   getAccessToken,
   graphRequest,
   getMeetingTranscripts,
   getTranscriptContent,
   sendBotMessage,
+  replyToActivity,
   isUserInGroup,
 };

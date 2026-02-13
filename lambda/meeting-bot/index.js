@@ -97,7 +97,7 @@ exports.handler = async (event) => {
 
       // Conversational commands (Hi / Hello / Help)
       if (body.type === 'message' && body.text) {
-        return respond(200, handleBotCommand(body.text.trim()));
+        return handleBotMessage(body);
       }
 
       // Meeting lifecycle events
@@ -105,7 +105,12 @@ exports.handler = async (event) => {
         return handleMeetingEvent(body);
       }
 
-      // installationUpdate, conversationUpdate, etc. – acknowledge
+      // Bot added to a meeting/chat – send welcome
+      if (body.type === 'conversationUpdate' && body.membersAdded) {
+        return handleConversationUpdate(body);
+      }
+
+      // installationUpdate, etc. – acknowledge
       console.log(`ℹ️  Unhandled activity type: ${body.type}`);
       return respond(200, { ok: true, type: body.type });
     }
@@ -300,30 +305,83 @@ async function fetchTranscript(meetingId, session) {
   return content;
 }
 
-// ─── Conversational commands ─────────────────────────────────────────────────
+// ─── Bot added to meeting/chat ───────────────────────────────────────────────
 
-function handleBotCommand(text) {
-  const cmd = text.toLowerCase().replace(/[^a-z]/g, '');
+async function handleConversationUpdate(activity) {
+  const botId = BOT_APP_ID;
+  const added = activity.membersAdded || [];
+  const botWasAdded = added.some(
+    (m) => m.id && (m.id.includes(botId) || m.id === `28:${botId}`)
+  );
 
-  if (cmd === 'help') {
-    return {
-      type: 'message',
-      text:
-        '**Meeting Fetcher Bot** — Commands:\n\n' +
-        '- **Hi** / **Hello** — Say hello\n' +
-        '- **Help** — Show this help message\n\n' +
-        'This bot notifies you when a meeting is being recorded and ' +
-        'posts the transcript when the meeting ends.',
-    };
+  if (!botWasAdded) {
+    // A user was added, not the bot – ignore
+    return respond(200, { ok: true });
   }
 
-  return {
-    type: 'message',
-    text:
+  console.log('🤖 Bot was added to conversation');
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+
+  // If this is a meeting chat, store the conversation for later use
+  const meeting = activity.channelData?.meeting;
+  if (meeting && meeting.id) {
+    await saveSession({
+      meeting_id: meeting.id,
+      status: 'bot_installed',
+      service_url: serviceUrl,
+      conversation_id: conversationId,
+      event_type: 'conversationUpdate',
+      received_at: new Date().toISOString(),
+    });
+    console.log(`📝 Stored meeting session for ${meeting.id}`);
+  }
+
+  return respond(200, { ok: true, action: 'bot_added' });
+}
+
+// ─── Conversational commands ─────────────────────────────────────────────────
+
+async function handleBotMessage(activity) {
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+  const activityId = activity.id || '';
+  const rawText = (activity.text || '').trim();
+
+  // Strip the @mention tag (Teams wraps it in <at>BotName</at>)
+  const text = rawText.replace(/<at>[^<]*<\/at>/gi, '').trim();
+  const cmd = text.toLowerCase().replace(/[^a-z]/g, '');
+
+  let replyText;
+  if (cmd === 'help') {
+    replyText =
+      '**Meeting Fetcher Bot** — Commands:\n\n' +
+      '- **Hi** / **Hello** — Say hello\n' +
+      '- **Help** — Show this help message\n\n' +
+      'This bot notifies you when a meeting is being recorded and ' +
+      'posts the transcript when the meeting ends.';
+  } else {
+    replyText =
       "Hello! I'm the **Meeting Fetcher** bot. " +
       'I notify when meetings are recorded and deliver transcripts.\n\n' +
-      'Type **Help** for more info.',
-  };
+      'Type **Help** for more info.';
+  }
+
+  // Reply via Bot Framework REST API (response body is ignored by Teams)
+  if (serviceUrl && conversationId) {
+    try {
+      if (activityId) {
+        await graph.replyToActivity(serviceUrl, conversationId, activityId, replyText);
+      } else {
+        await graph.sendBotMessage(serviceUrl, conversationId, replyText);
+      }
+      console.log('✅ Replied to message');
+    } catch (err) {
+      console.error(`❌ Failed to reply: ${err.message}`);
+    }
+  }
+
+  return respond(200, { ok: true });
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────

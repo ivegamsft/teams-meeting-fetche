@@ -22,10 +22,12 @@ or via the PowerShell script at `scripts/setup-teams-policies.ps1`.
 ```
 
 > **Finding IDs:**
+>
 > - **Group Object ID**: Azure Portal → Azure AD → Groups → select your group → Object ID
 > - **Catalog App ID**: `Get-TeamsApp -DistributionMethod Organization | Format-Table Id, DisplayName`
 
 The script will:
+
 1. Create / update the **"Recorded Line"** App Setup Policy with Meeting Fetcher auto-installed
 2. Create / update the **"Recorded Line"** Meeting Policy with auto-recording + transcription on
 3. Assign both policies to the specified security group via `New-CsGroupPolicyAssignment`
@@ -123,6 +125,7 @@ New-CsGroupPolicyAssignment `
 ## Policy Precedence
 
 Teams resolves policies in this order:
+
 1. **Direct user assignment** (highest priority)
 2. **Group assignment** (by rank — lower number wins)
 3. **Global (Org-wide default)** (lowest priority)
@@ -173,11 +176,11 @@ Get-CsUserPolicyAssignment -Identity "user@contoso.com" | Format-Table PolicyTyp
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Bot not in meeting chat | User not in policy group, or policy not propagated | Check group membership; wait 24h |
-| No meetingStart event | App not installed in meeting | Verify `Get-CsTeamsAppSetupPolicy "Recorded Line"` has the app |
-| Transcription not auto-starting | `AutoRecording` not set | Set to `"Enabled"` on the meeting policy |
-| "No transcript available" at meeting end | Transcription wasn't running | Ensure meeting policy is assigned; `AutoRecording = "Enabled"` |
-| Transcript fetch 403 | Missing Graph permission | Bot app needs `OnlineMeetingTranscript.Read.All` (application) |
-| Policy not taking effect for user | User has direct assignment that overrides | Remove direct: `Grant-CsTeamsMeetingPolicy -Identity user@contoso.com -PolicyName $null` |
+| Symptom                                  | Cause                                              | Fix                                                                                      |
+| ---------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Bot not in meeting chat                  | User not in policy group, or policy not propagated | Check group membership; wait 24h                                                         |
+| No meetingStart event                    | App not installed in meeting                       | Verify `Get-CsTeamsAppSetupPolicy "Recorded Line"` has the app                           |
+| Transcription not auto-starting          | `AutoRecording` not set                            | Set to `"Enabled"` on the meeting policy                                                 |
+| "No transcript available" at meeting end | Transcription wasn't running                       | Ensure meeting policy is assigned; `AutoRecording = "Enabled"`                           |
+| Transcript fetch 403                     | Missing Graph permission                           | Bot app needs `OnlineMeetingTranscript.Read.All` (application)                           |
+| Policy not taking effect for user        | User has direct assignment that overrides          | Remove direct: `Grant-CsTeamsMeetingPolicy -Identity user@contoso.com -PolicyName $null` |
