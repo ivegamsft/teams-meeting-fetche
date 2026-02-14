@@ -30,6 +30,8 @@ const BOT_APP_ID = process.env.BOT_APP_ID;
 const TEAMS_CATALOG_APP_ID = process.env.TEAMS_CATALOG_APP_ID || '';
 const WATCHED_USER_IDS = (process.env.WATCHED_USER_IDS || '').split(',').filter(Boolean);
 const POLL_LOOKAHEAD_MINUTES = parseInt(process.env.POLL_LOOKAHEAD_MINUTES || '60', 10);
+const GRAPH_NOTIFICATION_URL = process.env.GRAPH_NOTIFICATION_URL || '';
+const GRAPH_NOTIFICATION_CLIENT_STATE = process.env.GRAPH_NOTIFICATION_CLIENT_STATE || '';
 
 // ─── Structured logger ───────────────────────────────────────────────────────
 // Wraps console.log with consistent JSON output for CloudWatch filtering.
@@ -116,15 +118,20 @@ async function updateSessionStatus(meetingId, status, extra) {
 
 exports.handler = async (event) => {
   try {
-    // ── EventBridge scheduled event → auto-install poll ──
+    // ── EventBridge scheduled event → auto-install poll + subscription mgmt ──
     if (event.source === 'aws.events' || event['detail-type'] === 'Scheduled Event') {
       return handleScheduledPoll();
     }
 
+    const path = event.rawPath || event.path || '';
+
+    // ── Graph change notification webhook (before Bot Framework parsing) ──
+    if (path.includes('/bot/notifications') || path.includes('/bot/lifecycle')) {
+      return handleGraphNotification(event);
+    }
+
     let body = event.body;
     if (typeof body === 'string') body = JSON.parse(body);
-
-    const path = event.rawPath || event.path || '';
 
     log('INFO', 'Incoming request', {
       path,
@@ -156,13 +163,53 @@ exports.handler = async (event) => {
         return handleMeetingEvent(body);
       }
 
-      // Bot added to a meeting/chat – send welcome
+      // Bot or user added to a meeting/chat
       if (body.type === 'conversationUpdate' && body.membersAdded) {
         return handleConversationUpdate(body);
       }
 
-      // installationUpdate, etc. – acknowledge
+      // Bot or user removed from a meeting/chat
+      if (body.type === 'conversationUpdate' && body.membersRemoved) {
+        return handleMembersRemoved(body);
+      }
+
+      // Plain conversationUpdate (topic change, etc.)
+      if (body.type === 'conversationUpdate') {
+        return handleConversationUpdateGeneric(body);
+      }
+
+      // App installed/uninstalled/upgraded
+      if (body.type === 'installationUpdate') {
+        return handleInstallationUpdate(body);
+      }
+
+      // Reactions (like, heart, etc.)
+      if (body.type === 'messageReaction') {
+        return handleMessageReaction(body);
+      }
+
+      // Message edited
+      if (body.type === 'messageUpdate') {
+        return handleMessageUpdate(body);
+      }
+
+      // Message deleted
+      if (body.type === 'messageDelete') {
+        return handleMessageDelete(body);
+      }
+
+      // Typing indicator
+      if (body.type === 'typing') {
+        // Don't send debug chat for typing – too noisy
+        log('DEBUG', 'Typing indicator', {
+          from: body.from?.name || body.from?.aadObjectId || 'unknown',
+        });
+        return respond(200, { ok: true, type: 'typing' });
+      }
+
+      // Anything else we haven't seen before
       log('INFO', 'Unhandled activity type', { type: body.type, name: body.name });
+      await sendDebugEventToChat(body, `❓ Unknown activity: **${body.type}**`);
       return respond(200, { ok: true, type: body.type });
     }
 
@@ -196,7 +243,19 @@ async function handleMeetingEvent(activity) {
     return handleMeetingEnd(activity);
   }
 
+  // Participant joined meeting
+  if (eventName === 'application/vnd.microsoft.meetingParticipantJoin') {
+    return handleMeetingParticipantJoin(activity);
+  }
+
+  // Participant left meeting
+  if (eventName === 'application/vnd.microsoft.meetingParticipantLeave') {
+    return handleMeetingParticipantLeave(activity);
+  }
+
+  // Catch-all: any other event type – send debug to chat
   log('WARN', 'Unhandled event name', { eventName });
+  await sendDebugEventToChat(activity, `❓ Unknown event: **${eventName}**`);
   return respond(200, { ok: true, event: eventName });
 }
 
@@ -252,6 +311,19 @@ async function handleMeetingStart(activity) {
     received_at: new Date().toISOString(),
   });
   log('INFO', 'Session saved', { meetingId });
+
+  // Save conversation-keyed lookup for Graph notification handler
+  if (conversationId) {
+    await saveSession({
+      meeting_id: `conv:${conversationId}`,
+      service_url: serviceUrl,
+      conversation_id: conversationId,
+      original_meeting_id: meetingId,
+      status: 'conv_lookup',
+      event_type: 'conv_lookup',
+      received_at: new Date().toISOString(),
+    });
+  }
 
   // 2. Group allow-list check (optional)
   if (ALLOWED_GROUP_ID && organizerId) {
@@ -350,9 +422,36 @@ async function handleMeetingEnd(activity) {
     await updateSessionStatus(meetingId, 'ended');
   }
 
-  // Fetch transcript (with retry + delay to let Graph process it)
   const sUrl = effectiveSession.service_url;
   const convId = effectiveSession.conversation_id;
+
+  // Check if subscription-based delivery is active (skip polling in favor of push)
+  const subCache = await getSession('subscription:transcripts');
+  const subscriptionActive =
+    subCache &&
+    subCache.status === 'active' &&
+    new Date(subCache.expiration).getTime() > Date.now();
+
+  if (subscriptionActive) {
+    log('INFO', 'Subscription active – transcript will arrive via Graph notification', {
+      meetingId,
+    });
+    if (sUrl && convId) {
+      try {
+        await graph.sendBotMessage(
+          sUrl,
+          convId,
+          '⏳ Meeting ended. Transcript will be posted shortly…'
+        );
+      } catch (msgErr) {
+        log('WARN', 'Could not send meeting-ended notice', { error: msgErr.message });
+      }
+    }
+    return respond(200, { ok: true, action: 'meeting_ended_subscription', meetingId });
+  }
+
+  // ── Legacy fallback: fetch transcript directly (no active subscription) ──
+  log('INFO', 'No active subscription – using legacy transcript fetch', { meetingId });
 
   // Allow Graph time to finalize the transcript (typically 30-90s after meeting ends)
   log('INFO', 'Waiting 30s for Graph to finalize transcript', { meetingId });
@@ -795,8 +894,11 @@ async function handleConversationUpdate(activity) {
   const botWasAdded = added.some((m) => m.id && (m.id.includes(botId) || m.id === `28:${botId}`));
 
   if (!botWasAdded) {
-    // A user was added, not the bot – ignore
-    return respond(200, { ok: true });
+    // A user was added, not the bot
+    const names = added.map((m) => m.name || m.id || 'unknown').join(', ');
+    log('INFO', 'User(s) added to conversation', { names });
+    await sendDebugEventToChat(activity, `👤 **Member(s) added** to chat: ${names}`);
+    return respond(200, { ok: true, action: 'user_added' });
   }
 
   log('INFO', 'Bot was added to conversation', {
@@ -826,13 +928,252 @@ async function handleConversationUpdate(activity) {
       status: 'bot_installed',
       service_url: serviceUrl,
       conversation_id: conversationId,
+      join_url: meeting.joinUrl || '',
       event_type: 'conversationUpdate',
       received_at: new Date().toISOString(),
     });
     log('INFO', 'Stored meeting session from conversationUpdate', { meetingId: meeting.id });
+
+    // Save a conversation-keyed lookup for the Graph notification handler
+    await saveSession({
+      meeting_id: `conv:${conversationId}`,
+      service_url: serviceUrl,
+      conversation_id: conversationId,
+      original_meeting_id: meeting.id,
+      status: 'conv_lookup',
+      event_type: 'conv_lookup',
+      received_at: new Date().toISOString(),
+    });
   }
 
   return respond(200, { ok: true, action: 'bot_added' });
+}
+
+// ─── Members removed from chat ───────────────────────────────────────────────
+
+async function handleMembersRemoved(activity) {
+  const botId = BOT_APP_ID;
+  const removed = activity.membersRemoved || [];
+  const botWasRemoved = removed.some(
+    (m) => m.id && (m.id.includes(botId) || m.id === `28:${botId}`)
+  );
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+  const meeting = activity.channelData?.meeting;
+
+  if (botWasRemoved) {
+    log('WARN', 'Bot was REMOVED from conversation', {
+      conversationId: conversationId.substring(0, 40),
+      meetingId: meeting?.id,
+    });
+
+    // Clear the autoinstall cache so the next poll re-installs us
+    if (meeting?.id) {
+      // Mark the meeting session as bot_removed
+      await saveSession({
+        meeting_id: meeting.id,
+        status: 'bot_removed',
+        service_url: serviceUrl,
+        conversation_id: conversationId,
+        event_type: 'membersRemoved',
+        removed_at: new Date().toISOString(),
+      });
+      log('INFO', 'Marked meeting session as bot_removed', { meetingId: meeting.id });
+
+      // Also try to find and clear the autoinstall: cache entry
+      // The autoinstall key is based on joinUrl, which we might have stored
+      const existingSession = await getSession(meeting.id);
+      const joinUrl = existingSession?.join_url || '';
+      if (joinUrl) {
+        const cacheKey = `autoinstall:${joinUrl.substring(0, 120)}`;
+        await saveSession({
+          meeting_id: cacheKey,
+          status: 'bot_removed',
+          recording_configured: false,
+          join_url: joinUrl,
+          event_type: 'autoinstall_cleared',
+          removed_at: new Date().toISOString(),
+        });
+        log('INFO', 'Cleared autoinstall cache', { cacheKey: cacheKey.substring(0, 60) });
+      }
+    }
+
+    // Try to send a message before removal takes effect (may fail)
+    try {
+      await graph.sendBotMessage(
+        serviceUrl,
+        conversationId,
+        '🚫 **Bot removed** from this chat. The auto-install poll will re-add me if the meeting is still upcoming.'
+      );
+    } catch (_) {
+      // Expected to fail – bot may already be removed
+    }
+
+    return respond(200, { ok: true, action: 'bot_removed' });
+  }
+
+  // A user was removed, not the bot
+  const names = removed.map((m) => m.name || m.id || 'unknown').join(', ');
+  log('INFO', 'User(s) removed from conversation', { names });
+  await sendDebugEventToChat(activity, `👤 **Member(s) removed** from chat: ${names}`);
+  return respond(200, { ok: true, action: 'user_removed' });
+}
+
+// ─── Generic conversationUpdate (topic change, etc.) ─────────────────────────
+
+async function handleConversationUpdateGeneric(activity) {
+  const topicName = activity.topicName || activity.channelData?.channel?.name || '';
+  log('INFO', 'Generic conversationUpdate', {
+    topicName,
+    conversationId: activity.conversation?.id?.substring(0, 40),
+    channelDataKeys: activity.channelData ? Object.keys(activity.channelData) : [],
+  });
+  await sendDebugEventToChat(
+    activity,
+    `💬 **Conversation updated**${topicName ? ': topic → _' + topicName + '_' : ''}`
+  );
+  return respond(200, { ok: true, action: 'conversation_update_generic' });
+}
+
+// ─── App install/uninstall/upgrade ───────────────────────────────────────────
+
+async function handleInstallationUpdate(activity) {
+  const action = activity.action || 'unknown'; // add, remove, upgrade
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+  const meeting = activity.channelData?.meeting;
+
+  log('INFO', 'Installation update', {
+    action,
+    conversationId: conversationId.substring(0, 40),
+    meetingId: meeting?.id,
+    from: activity.from?.aadObjectId || 'unknown',
+  });
+
+  if (action === 'remove' || action === 'remove-personal') {
+    // App was uninstalled — clear cache
+    if (meeting?.id) {
+      await saveSession({
+        meeting_id: meeting.id,
+        status: 'uninstalled',
+        service_url: serviceUrl,
+        conversation_id: conversationId,
+        event_type: 'installationUpdate_remove',
+        removed_at: new Date().toISOString(),
+      });
+      log('INFO', 'Marked meeting as uninstalled via installationUpdate', {
+        meetingId: meeting.id,
+      });
+    }
+  }
+
+  const emoji =
+    action === 'add' ? '✅' : action === 'remove' || action === 'remove-personal' ? '🗑️' : '⬆️';
+  await sendDebugEventToChat(activity, `${emoji} **installationUpdate**: action=**${action}**`);
+  return respond(200, { ok: true, action: `install_${action}` });
+}
+
+// ─── Reactions (like, heart, etc.) ───────────────────────────────────────────
+
+async function handleMessageReaction(activity) {
+  const added = activity.reactionsAdded || [];
+  const removed = activity.reactionsRemoved || [];
+  const from = activity.from?.name || activity.from?.aadObjectId || 'unknown';
+
+  log('INFO', 'Message reaction', {
+    added: added.map((r) => r.type),
+    removed: removed.map((r) => r.type),
+    from,
+  });
+
+  const parts = [];
+  if (added.length) parts.push(`added: ${added.map((r) => r.type).join(', ')}`);
+  if (removed.length) parts.push(`removed: ${removed.map((r) => r.type).join(', ')}`);
+
+  await sendDebugEventToChat(activity, `👍 **Reaction** by ${from}: ${parts.join('; ')}`);
+  return respond(200, { ok: true, action: 'reaction' });
+}
+
+// ─── Message edited ──────────────────────────────────────────────────────────
+
+async function handleMessageUpdate(activity) {
+  const from = activity.from?.name || activity.from?.aadObjectId || 'unknown';
+  log('INFO', 'Message updated', {
+    from,
+    conversationId: activity.conversation?.id?.substring(0, 40),
+  });
+  await sendDebugEventToChat(activity, `✏️ **Message edited** by ${from}`);
+  return respond(200, { ok: true, action: 'message_update' });
+}
+
+// ─── Message deleted ─────────────────────────────────────────────────────────
+
+async function handleMessageDelete(activity) {
+  const from = activity.from?.name || activity.from?.aadObjectId || 'unknown';
+  log('INFO', 'Message deleted', {
+    from,
+    conversationId: activity.conversation?.id?.substring(0, 40),
+  });
+  await sendDebugEventToChat(activity, `🗑️ **Message deleted** by ${from}`);
+  return respond(200, { ok: true, action: 'message_delete' });
+}
+
+// ─── Meeting participant join/leave ──────────────────────────────────────────
+
+async function handleMeetingParticipantJoin(activity) {
+  const participants = activity.value?.members || activity.value?.Members || [];
+  const names = participants
+    .map(
+      (p) => p.user?.name || p.user?.aadObjectId || p.User?.Name || p.User?.Id || JSON.stringify(p)
+    )
+    .join(', ');
+
+  log('INFO', 'Participant(s) joined meeting', { names, count: participants.length });
+  await sendDebugEventToChat(activity, `🟢 **Participant joined**: ${names || '(unknown)'}`);
+  return respond(200, { ok: true, action: 'participant_join' });
+}
+
+async function handleMeetingParticipantLeave(activity) {
+  const participants = activity.value?.members || activity.value?.Members || [];
+  const names = participants
+    .map(
+      (p) => p.user?.name || p.user?.aadObjectId || p.User?.Name || p.User?.Id || JSON.stringify(p)
+    )
+    .join(', ');
+
+  log('INFO', 'Participant(s) left meeting', { names, count: participants.length });
+  await sendDebugEventToChat(activity, `🔴 **Participant left**: ${names || '(unknown)'}`);
+  return respond(200, { ok: true, action: 'participant_leave' });
+}
+
+// ─── Debug helper: send event info to chat ───────────────────────────────────
+
+async function sendDebugEventToChat(activity, headline) {
+  const serviceUrl = activity.serviceUrl || '';
+  const conversationId = activity.conversation?.id || '';
+
+  if (!serviceUrl || !conversationId) {
+    log('DEBUG', 'Cannot send debug to chat – missing serviceUrl or conversationId');
+    return;
+  }
+
+  const ts = new Date()
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d+Z$/, ' UTC');
+  const msg =
+    `🔔 **Event Debug** (${ts})\n\n` +
+    `${headline}\n\n` +
+    `• Type: \`${activity.type || 'n/a'}\`\n` +
+    `• Name: \`${activity.name || 'n/a'}\`\n` +
+    `• From: ${activity.from?.name || activity.from?.aadObjectId || 'system'}\n` +
+    `• Meeting: ${activity.channelData?.meeting?.id?.substring(0, 30) || 'n/a'}`;
+
+  try {
+    await graph.sendBotMessage(serviceUrl, conversationId, msg);
+  } catch (err) {
+    log('WARN', 'Failed to send debug event to chat', { error: err.message });
+  }
 }
 
 // ─── Auto-install: Scheduled poll for upcoming meetings ──────────────────────
@@ -842,11 +1183,16 @@ async function handleScheduledPoll() {
     catalogAppId: TEAMS_CATALOG_APP_ID ? 'set' : 'MISSING',
     watchedUsers: WATCHED_USER_IDS.length,
     lookaheadMinutes: POLL_LOOKAHEAD_MINUTES,
+    notificationUrl: GRAPH_NOTIFICATION_URL ? 'set' : 'MISSING',
   });
 
+  // 1. Manage Graph transcript subscription (always, if configured)
+  await manageTranscriptSubscription();
+
+  // 2. Auto-install poll (requires TEAMS_CATALOG_APP_ID)
   if (!TEAMS_CATALOG_APP_ID) {
-    log('ERROR', 'TEAMS_CATALOG_APP_ID not set – cannot auto-install');
-    return respond(200, { ok: false, error: 'TEAMS_CATALOG_APP_ID not configured' });
+    log('INFO', 'Auto-install not configured – subscription management only');
+    return respond(200, { ok: true, action: 'subscription_only' });
   }
 
   // Resolve watched users: use explicit list, or fall back to group members
@@ -884,7 +1230,12 @@ async function handleScheduledPoll() {
     }
   }
 
-  log('INFO', 'Scheduled poll complete', { installed, skipped, errors, usersPolled: userIds.length });
+  log('INFO', 'Scheduled poll complete', {
+    installed,
+    skipped,
+    errors,
+    usersPolled: userIds.length,
+  });
   return respond(200, { ok: true, action: 'poll_complete', installed, skipped, errors });
 }
 
@@ -899,11 +1250,17 @@ async function pollUserMeetings(userId) {
   try {
     events = await graph.getUpcomingOnlineMeetings(userId, POLL_LOOKAHEAD_MINUTES);
   } catch (err) {
-    log('ERROR', 'Failed to get calendar events', { userId, error: err.message, statusCode: err.statusCode });
+    log('ERROR', 'Failed to get calendar events', {
+      userId,
+      error: err.message,
+      statusCode: err.statusCode,
+    });
     return { installed: 0, skipped: 0, errors: 1 };
   }
 
-  const meetings = (events.value || []).filter((e) => e.isOnlineMeeting && e.onlineMeeting?.joinUrl);
+  const meetings = (events.value || []).filter(
+    (e) => e.isOnlineMeeting && e.onlineMeeting?.joinUrl
+  );
   log('INFO', 'Found online meetings', { userId, count: meetings.length });
 
   for (const meeting of meetings) {
@@ -911,10 +1268,10 @@ async function pollUserMeetings(userId) {
     const subject = meeting.subject || '(untitled)';
 
     try {
-      // Check DynamoDB to see if we've already processed this meeting
+      // Check DynamoDB to see if we've already fully processed this meeting
       const cacheKey = `autoinstall:${joinUrl.substring(0, 120)}`;
       const cached = await getSession(cacheKey);
-      if (cached && cached.status === 'installed') {
+      if (cached && cached.status === 'installed' && cached.recording_configured) {
         skipped++;
         continue;
       }
@@ -928,62 +1285,77 @@ async function pollUserMeetings(userId) {
       }
 
       const chatId = onlineMeeting.chatInfo.threadId;
-      log('INFO', 'Checking if bot is installed in meeting chat', {
-        subject,
-        chatId: chatId.substring(0, 40),
-      });
 
-      // Check if the bot app is already installed
-      let alreadyInstalled = false;
-      try {
-        const apps = await graph.getInstalledAppsInChat(chatId);
-        alreadyInstalled = (apps.value || []).some(
-          (a) => a.teamsApp?.id === TEAMS_CATALOG_APP_ID
-        );
-      } catch (checkErr) {
-        // 403/404 might mean the chat doesn't exist yet or no access
-        log('WARN', 'Could not check installed apps', {
+      // ── Ensure bot is installed ───────────────────────────────────────────
+      let botJustInstalled = false;
+      if (!(cached && cached.status === 'installed')) {
+        log('INFO', 'Checking if bot is installed in meeting chat', {
+          subject,
           chatId: chatId.substring(0, 40),
-          error: checkErr.message,
-          statusCode: checkErr.statusCode,
+        });
+
+        let alreadyInstalled = false;
+        try {
+          const apps = await graph.getInstalledAppsInChat(chatId);
+          alreadyInstalled = (apps.value || []).some(
+            (a) => a.teamsApp?.id === TEAMS_CATALOG_APP_ID
+          );
+        } catch (checkErr) {
+          log('WARN', 'Could not check installed apps', {
+            chatId: chatId.substring(0, 40),
+            error: checkErr.message,
+            statusCode: checkErr.statusCode,
+          });
+        }
+
+        if (!alreadyInstalled) {
+          log('INFO', 'Installing bot into meeting chat', {
+            subject,
+            chatId: chatId.substring(0, 40),
+            catalogAppId: TEAMS_CATALOG_APP_ID,
+          });
+          await graph.installAppInChat(chatId, TEAMS_CATALOG_APP_ID);
+          log('INFO', 'Bot installed successfully', { subject, chatId: chatId.substring(0, 40) });
+          botJustInstalled = true;
+        } else {
+          log('INFO', 'Bot already installed', { subject, chatId: chatId.substring(0, 40) });
+        }
+      }
+
+      // ── Ensure auto-recording + transcription are enabled on the meeting ──
+      let recordingConfigured = false;
+      try {
+        await graph.updateOnlineMeeting(userId, onlineMeeting.id, {
+          recordAutomatically: true,
+          allowTranscription: true,
+        });
+        recordingConfigured = true;
+        log('INFO', 'Meeting updated: auto-record + transcription enabled', { subject });
+      } catch (updateErr) {
+        log('WARN', 'Could not update meeting settings', {
+          subject,
+          error: updateErr.message,
+          statusCode: updateErr.statusCode,
         });
       }
 
-      if (alreadyInstalled) {
-        log('INFO', 'Bot already installed', { subject, chatId: chatId.substring(0, 40) });
-        // Cache it so we skip next time
-        await saveSession({
-          meeting_id: cacheKey,
-          status: 'installed',
-          join_url: joinUrl,
-          title: subject,
-          event_type: 'autoinstall_cached',
-          received_at: new Date().toISOString(),
-        });
-        skipped++;
-        continue;
-      }
-
-      // Install the bot!
-      log('INFO', 'Installing bot into meeting chat', {
-        subject,
-        chatId: chatId.substring(0, 40),
-        catalogAppId: TEAMS_CATALOG_APP_ID,
-      });
-      await graph.installAppInChat(chatId, TEAMS_CATALOG_APP_ID);
-      log('INFO', 'Bot installed successfully', { subject, chatId: chatId.substring(0, 40) });
-
-      // Cache the installation
+      // Cache the installation + recording state
       await saveSession({
         meeting_id: cacheKey,
         status: 'installed',
+        recording_configured: recordingConfigured,
         join_url: joinUrl,
         title: subject,
         organizer_id: userId,
-        event_type: 'autoinstall',
+        event_type: botJustInstalled ? 'autoinstall' : 'autoinstall_cached',
         received_at: new Date().toISOString(),
       });
-      installed++;
+
+      if (botJustInstalled) {
+        installed++;
+      } else {
+        skipped++;
+      }
     } catch (err) {
       // 409 = already installed (race condition)
       if (err.statusCode === 409) {
@@ -1001,6 +1373,332 @@ async function pollUserMeetings(userId) {
   }
 
   return { installed, skipped, errors };
+}
+
+// ─── Graph Change Notification Handlers ──────────────────────────────────────
+
+async function handleGraphNotification(event) {
+  const path = event.rawPath || event.path || '';
+  const queryParams = event.queryStringParameters || {};
+
+  // Graph subscription validation: echo back validationToken (POST with ?validationToken=...)
+  if (queryParams.validationToken) {
+    log('INFO', 'Graph subscription validation request');
+    return {
+      statusCode: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      body: queryParams.validationToken,
+    };
+  }
+
+  let body = event.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (_) {
+      body = {};
+    }
+  }
+
+  if (!body || !body.value) {
+    log('WARN', 'Empty or invalid Graph notification payload');
+    return respond(202, { ok: true });
+  }
+
+  if (path.includes('/bot/lifecycle')) {
+    return handleLifecycleNotifications(body);
+  }
+
+  return handleTranscriptNotifications(body);
+}
+
+async function handleTranscriptNotifications(body) {
+  const notifications = body.value || [];
+  log('INFO', 'Graph transcript notifications received', { count: notifications.length });
+
+  for (const notification of notifications) {
+    // Validate clientState if configured
+    if (
+      GRAPH_NOTIFICATION_CLIENT_STATE &&
+      notification.clientState !== GRAPH_NOTIFICATION_CLIENT_STATE
+    ) {
+      log('WARN', 'Invalid clientState in notification – skipping');
+      continue;
+    }
+
+    const odataType = notification.resourceData?.['@odata.type'] || '';
+    if (odataType === '#Microsoft.Graph.callTranscript') {
+      try {
+        await handleTranscriptCreated(notification);
+      } catch (err) {
+        log('ERROR', 'Failed to process transcript notification', {
+          error: err.message,
+          resource: (notification.resource || '').substring(0, 80),
+        });
+      }
+    } else {
+      log('INFO', 'Ignoring non-transcript notification', { odataType });
+    }
+  }
+
+  // Must respond within 3 seconds to acknowledge
+  return respond(202, { ok: true, processed: notifications.length });
+}
+
+async function handleTranscriptCreated(notification) {
+  // Parse resource path: users/{userId}/onlineMeetings('{meetingId}')/transcripts('{transcriptId}')
+  const resource = notification.resource || notification.resourceData?.['@odata.id'] || '';
+  const match = resource.match(
+    /users\/([^/]+)\/onlineMeetings\(?'?([^)']+)'?\)?\/transcripts\(?'?([^)']+)'?\)?/
+  );
+  if (!match) {
+    log('WARN', 'Cannot parse transcript resource path', { resource: resource.substring(0, 100) });
+    return;
+  }
+
+  const [, userId, onlineMeetingId, transcriptId] = match;
+  log('INFO', 'Transcript available (subscription)', {
+    userId,
+    onlineMeetingId: onlineMeetingId.substring(0, 30),
+    transcriptId: transcriptId.substring(0, 30),
+  });
+
+  // Look up the meeting to find the chat thread ID
+  let chatThreadId, meetingSubject;
+  try {
+    const meeting = await graph.getOnlineMeeting(userId, onlineMeetingId);
+    chatThreadId = meeting?.chatInfo?.threadId;
+    meetingSubject = meeting?.subject || '(unknown)';
+    log('INFO', 'Resolved meeting chat', {
+      subject: meetingSubject,
+      chatThreadId: chatThreadId?.substring(0, 40),
+    });
+  } catch (err) {
+    log('WARN', 'Cannot get online meeting details', {
+      onlineMeetingId: onlineMeetingId.substring(0, 30),
+      error: err.message,
+    });
+  }
+
+  // Look up serviceUrl from DynamoDB conv: entry
+  let serviceUrl = '';
+  if (chatThreadId) {
+    const convSession = await getSession(`conv:${chatThreadId}`);
+    if (convSession) {
+      serviceUrl = convSession.service_url;
+
+      // Dedup: if transcript was already delivered (e.g. by legacy meetingEnd handler)
+      if (convSession.transcript_delivered) {
+        log('INFO', 'Transcript already delivered for this chat – skipping', {
+          chatThreadId: chatThreadId.substring(0, 40),
+        });
+        return;
+      }
+    } else {
+      log('WARN', 'No conv: entry in DynamoDB for chat', {
+        chatThreadId: chatThreadId.substring(0, 40),
+      });
+    }
+  }
+
+  // Download the transcript
+  const content = await graph.getTranscriptContent(
+    userId,
+    onlineMeetingId,
+    transcriptId,
+    'text/vtt'
+  );
+  log('INFO', 'Transcript downloaded (subscription)', { chars: content.length });
+
+  // Save to S3
+  let s3Key = '';
+  if (TRANSCRIPT_BUCKET) {
+    try {
+      const datePrefix = new Date().toISOString().slice(0, 10);
+      const safeMeetingId = onlineMeetingId.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 80);
+      s3Key = `transcripts/${datePrefix}/${safeMeetingId}.vtt`;
+      await s3
+        .putObject({
+          Bucket: TRANSCRIPT_BUCKET,
+          Key: s3Key,
+          Body: content,
+          ContentType: 'text/vtt',
+          Metadata: {
+            onlineMeetingId: onlineMeetingId.substring(0, 256),
+            organizerId: userId,
+            transcriptId,
+            source: 'graph_subscription',
+            fetchedAt: new Date().toISOString(),
+          },
+        })
+        .promise();
+      log('INFO', 'Transcript saved to S3 (subscription)', { key: s3Key });
+    } catch (s3Err) {
+      log('ERROR', 'Failed to save transcript to S3', { error: s3Err.message });
+    }
+  }
+
+  // Post to meeting chat
+  if (serviceUrl && chatThreadId) {
+    const preview =
+      content.length > 3000 ? content.substring(0, 3000) + '\n\n… (truncated)' : content;
+    const s3Note = s3Key ? `\n\n📁 Full transcript saved to S3: \`${s3Key}\`` : '';
+    await graph.sendBotMessage(
+      serviceUrl,
+      chatThreadId,
+      `📝 **Meeting Transcript**\n\n\`\`\`\n${preview}\n\`\`\`${s3Note}`
+    );
+    log('INFO', 'Transcript posted to chat (subscription)', {
+      chatThreadId: chatThreadId.substring(0, 40),
+    });
+    // Mark as delivered to prevent duplicate from meetingEnd handler
+    await saveSession({
+      meeting_id: `conv:${chatThreadId}`,
+      service_url: serviceUrl,
+      conversation_id: chatThreadId,
+      transcript_delivered: true,
+      transcript_source: 'subscription',
+      status: 'transcript_delivered',
+      event_type: 'subscription_delivery',
+      received_at: new Date().toISOString(),
+    });
+  } else {
+    log('WARN', 'Cannot post transcript to chat (subscription)', {
+      hasServiceUrl: !!serviceUrl,
+      hasChatThreadId: !!chatThreadId,
+      s3Key,
+    });
+  }
+}
+
+async function handleLifecycleNotifications(body) {
+  const notifications = body.value || [];
+  log('INFO', 'Graph lifecycle notifications received', { count: notifications.length });
+
+  for (const notification of notifications) {
+    const lcEvent = notification.lifecycleEvent;
+    const subId = notification.subscriptionId;
+    log('INFO', 'Lifecycle event', { event: lcEvent, subscriptionId: subId });
+
+    if (lcEvent === 'reauthorizationRequired') {
+      try {
+        await graph.renewGraphSubscription(subId, 4230);
+        log('INFO', 'Subscription renewed via lifecycle', { subscriptionId: subId });
+        const cached = await getSession('subscription:transcripts');
+        if (cached && cached.subscription_id === subId) {
+          await saveSession({
+            ...cached,
+            expiration: new Date(Date.now() + 4230 * 60 * 1000).toISOString(),
+          });
+        }
+      } catch (err) {
+        log('ERROR', 'Failed to renew subscription from lifecycle event', {
+          subscriptionId: subId,
+          error: err.message,
+        });
+      }
+    } else if (lcEvent === 'subscriptionRemoved' || lcEvent === 'missed') {
+      log('WARN', 'Subscription lost', { event: lcEvent, subscriptionId: subId });
+      try {
+        await saveSession({
+          meeting_id: 'subscription:transcripts',
+          status: 'removed',
+          removed_reason: lcEvent,
+          received_at: new Date().toISOString(),
+          expires_at: Math.floor(Date.now() / 1000) + 86400,
+        });
+      } catch (_) {
+        /* best effort */
+      }
+    }
+  }
+
+  return respond(202, { ok: true });
+}
+
+// ─── Graph Subscription Management ──────────────────────────────────────────
+
+async function manageTranscriptSubscription() {
+  if (!GRAPH_NOTIFICATION_URL) {
+    return;
+  }
+
+  const SUBSCRIPTION_KEY = 'subscription:transcripts';
+  try {
+    const cached = await getSession(SUBSCRIPTION_KEY);
+
+    if (cached && cached.subscription_id && cached.status === 'active') {
+      // Check if still valid (renew if expires within 60 min)
+      const expiresAt = new Date(cached.expiration).getTime();
+      const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+
+      if (expiresAt > oneHourFromNow) {
+        log('INFO', 'Transcript subscription valid', {
+          subscriptionId: cached.subscription_id,
+          expiresIn: Math.round((expiresAt - Date.now()) / 60000) + ' min',
+        });
+        return;
+      }
+
+      // Renew
+      log('INFO', 'Renewing transcript subscription', { subscriptionId: cached.subscription_id });
+      try {
+        const result = await graph.renewGraphSubscription(cached.subscription_id, 4230);
+        await saveSession({
+          meeting_id: SUBSCRIPTION_KEY,
+          subscription_id: cached.subscription_id,
+          expiration: result.expirationDateTime,
+          resource: cached.resource,
+          status: 'active',
+        });
+        log('INFO', 'Transcript subscription renewed', {
+          subscriptionId: cached.subscription_id,
+          newExpiration: result.expirationDateTime,
+        });
+        return;
+      } catch (renewErr) {
+        log('WARN', 'Renewal failed – will recreate', { error: renewErr.message });
+      }
+    }
+
+    // Create new subscription
+    const notifUrl = GRAPH_NOTIFICATION_URL;
+    const lifecycleUrl = GRAPH_NOTIFICATION_URL.replace(/\/notifications\/?$/, '/lifecycle');
+    const resource = 'communications/onlineMeetings/getAllTranscripts';
+    const clientState = GRAPH_NOTIFICATION_CLIENT_STATE || `tmf-${Date.now()}`;
+
+    log('INFO', 'Creating transcript subscription', { notifUrl, resource });
+
+    const result = await graph.createGraphSubscription(
+      notifUrl,
+      resource,
+      'created',
+      4230, // ~3 days max for online meeting transcripts
+      clientState,
+      lifecycleUrl
+    );
+
+    await saveSession({
+      meeting_id: SUBSCRIPTION_KEY,
+      subscription_id: result.id,
+      expiration: result.expirationDateTime,
+      resource,
+      client_state: clientState,
+      notification_url: notifUrl,
+      status: 'active',
+    });
+
+    log('INFO', 'Transcript subscription created', {
+      subscriptionId: result.id,
+      expiresAt: result.expirationDateTime,
+    });
+  } catch (err) {
+    log('ERROR', 'Subscription management failed', {
+      error: err.message,
+      statusCode: err.statusCode,
+      body: (err.body || '').substring(0, 200),
+    });
+  }
 }
 
 // ─── Meeting tab config page ─────────────────────────────────────────────────

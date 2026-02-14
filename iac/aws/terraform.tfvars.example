@@ -76,3 +76,14 @@ watched_user_ids = ""
 
 # Minutes into the future to scan for upcoming meetings (default: 60)
 poll_lookahead_minutes = 60
+
+#=============================================================================
+# GRAPH CHANGE NOTIFICATIONS (transcript push instead of poll)
+#=============================================================================
+
+# Lambda Function URL for Graph notification webhooks.
+# Set after first deploy: terraform output meeting_bot_webhook_url
+graph_notification_url = ""
+
+# Secret string for validating Graph notifications
+graph_notification_client_state = ""

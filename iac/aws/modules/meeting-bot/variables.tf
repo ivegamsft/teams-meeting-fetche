@@ -131,3 +131,20 @@ variable "poll_schedule_expression" {
   type        = string
   default     = "rate(10 minutes)"
 }
+
+//=============================================================================
+// GRAPH SUBSCRIPTION VARIABLES
+//=============================================================================
+
+variable "graph_notification_url" {
+  description = "Base URL for Graph change notification webhooks (Lambda Function URL). Set after first deploy."
+  type        = string
+  default     = ""
+}
+
+variable "graph_notification_client_state" {
+  description = "Secret client state string for Graph notification validation"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

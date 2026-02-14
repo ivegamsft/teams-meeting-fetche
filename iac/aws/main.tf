@@ -128,24 +128,26 @@ module "api_gateway" {
 module "meeting_bot" {
   source = "./modules/meeting-bot"
 
-  function_name             = "tmf-meeting-bot-${var.environment}"
-  handler                   = "index.handler"
-  runtime                   = "nodejs18.x"
-  timeout                   = 300
-  memory_size               = 512
-  meetings_table_name       = "meeting-bot-sessions-${var.environment}"
-  azure_graph_tenant_id     = var.azure_graph_tenant_id
-  azure_graph_client_id     = var.azure_graph_client_id
-  azure_graph_client_secret = var.azure_graph_client_secret
-  azure_bot_app_id          = var.azure_bot_app_id
-  azure_bot_app_secret      = var.azure_bot_app_secret
-  azure_allowed_group_id    = var.azure_allowed_group_id
-  group_cache_ttl_seconds   = var.group_cache_ttl_seconds
-  transcript_bucket_name    = module.storage.bucket_name
-  transcript_bucket_arn     = module.storage.bucket_arn
-  teams_catalog_app_id      = var.teams_catalog_app_id
-  watched_user_ids          = var.watched_user_ids
-  poll_lookahead_minutes    = var.poll_lookahead_minutes
+  function_name                   = "tmf-meeting-bot-${var.environment}"
+  handler                         = "index.handler"
+  runtime                         = "nodejs18.x"
+  timeout                         = 300
+  memory_size                     = 512
+  meetings_table_name             = "meeting-bot-sessions-${var.environment}"
+  azure_graph_tenant_id           = var.azure_graph_tenant_id
+  azure_graph_client_id           = var.azure_graph_client_id
+  azure_graph_client_secret       = var.azure_graph_client_secret
+  azure_bot_app_id                = var.azure_bot_app_id
+  azure_bot_app_secret            = var.azure_bot_app_secret
+  azure_allowed_group_id          = var.azure_allowed_group_id
+  group_cache_ttl_seconds         = var.group_cache_ttl_seconds
+  transcript_bucket_name          = module.storage.bucket_name
+  transcript_bucket_arn           = module.storage.bucket_arn
+  teams_catalog_app_id            = var.teams_catalog_app_id
+  watched_user_ids                = var.watched_user_ids
+  poll_lookahead_minutes          = var.poll_lookahead_minutes
+  graph_notification_url          = var.graph_notification_url
+  graph_notification_client_state = var.graph_notification_client_state
 
   tags = local.common_tags
 }

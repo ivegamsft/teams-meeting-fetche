@@ -27,6 +27,16 @@ const mockGetOnlineMeetingByJoinUrl = jest.fn().mockResolvedValue(null);
 const mockGetInstalledAppsInChat = jest.fn().mockResolvedValue({ value: [] });
 const mockInstallAppInChat = jest.fn().mockResolvedValue({});
 const mockGetGroupMembers = jest.fn().mockResolvedValue([]);
+const mockCreateGraphSubscription = jest.fn().mockResolvedValue({
+  id: 'sub-123',
+  expirationDateTime: new Date(Date.now() + 4230 * 60 * 1000).toISOString(),
+});
+const mockRenewGraphSubscription = jest.fn().mockResolvedValue({ id: 'sub-123' });
+const mockDeleteGraphSubscription = jest.fn().mockResolvedValue({});
+const mockGetOnlineMeeting = jest
+  .fn()
+  .mockResolvedValue({ id: 'meeting-1', chatInfo: { threadId: '19:meeting_abc@thread.v2' } });
+const mockUpdateOnlineMeeting = jest.fn().mockResolvedValue({});
 
 jest.mock('../../../lambda/meeting-bot/graph-client', () => ({
   graphRequest: mockGraphRequest,
@@ -40,6 +50,11 @@ jest.mock('../../../lambda/meeting-bot/graph-client', () => ({
   getInstalledAppsInChat: mockGetInstalledAppsInChat,
   installAppInChat: mockInstallAppInChat,
   getGroupMembers: mockGetGroupMembers,
+  createGraphSubscription: mockCreateGraphSubscription,
+  renewGraphSubscription: mockRenewGraphSubscription,
+  deleteGraphSubscription: mockDeleteGraphSubscription,
+  getOnlineMeeting: mockGetOnlineMeeting,
+  updateOnlineMeeting: mockUpdateOnlineMeeting,
 }));
 
 // Mock AWS SDK
@@ -70,6 +85,8 @@ process.env.GRAPH_TENANT_ID = 'test-tenant';
 process.env.TEAMS_CATALOG_APP_ID = 'test-catalog-app-id';
 process.env.WATCHED_USER_IDS = 'user-1,user-2';
 process.env.POLL_LOOKAHEAD_MINUTES = '60';
+process.env.GRAPH_NOTIFICATION_URL = 'https://example.com/bot/notifications';
+process.env.GRAPH_NOTIFICATION_CLIENT_STATE = 'test-client-state';
 
 const { handler } = require('../../../lambda/meeting-bot/index');
 
@@ -584,10 +601,10 @@ describe('Meeting Bot Handler', () => {
       expect(session.status).toBe('bot_installed');
     });
 
-    it('should ignore when a user (not bot) is added', async () => {
+    it('should send debug message when a user (not bot) is added', async () => {
       const activity = {
         type: 'conversationUpdate',
-        membersAdded: [{ id: '29:some-user-id' }],
+        membersAdded: [{ id: '29:some-user-id', name: 'Alice' }],
         serviceUrl: 'https://smba.trafficmanager.net/test/',
         conversation: { id: '19:meeting_test@thread.v2' },
         channelData: {},
@@ -597,7 +614,11 @@ describe('Meeting Bot Handler', () => {
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
-      expect(mockSendBotMessage).not.toHaveBeenCalled();
+      // Now sends a debug event message for user additions
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Member(s) added');
+      expect(debugText).toContain('Alice');
     });
   });
 
@@ -774,6 +795,374 @@ describe('Meeting Bot Handler', () => {
       const body = JSON.parse(result.body);
       expect(body.installed).toBe(0);
       expect(mockInstallAppInChat).not.toHaveBeenCalled();
+    });
+
+    it('should enable auto-recording + transcription after installing bot', async () => {
+      const meetingEvent = {
+        id: 'cal-event-5',
+        subject: 'Auto Record Meeting',
+        isOnlineMeeting: true,
+        onlineMeeting: {
+          joinUrl: 'https://teams.microsoft.com/l/meetup-join/auto-record-test',
+        },
+      };
+
+      mockGetUpcomingOnlineMeetings.mockResolvedValue({ value: [meetingEvent] });
+      mockGetOnlineMeetingByJoinUrl.mockResolvedValue({
+        id: 'online-meeting-id-5',
+        chatInfo: { threadId: '19:meeting_autorecord@thread.v2' },
+      });
+      mockGetInstalledAppsInChat.mockResolvedValue({ value: [] });
+      mockInstallAppInChat.mockResolvedValue({});
+      mockUpdateOnlineMeeting.mockResolvedValue({});
+
+      await handler(makeScheduledEvent());
+
+      expect(mockUpdateOnlineMeeting).toHaveBeenCalledWith(
+        expect.any(String),
+        'online-meeting-id-5',
+        { recordAutomatically: true, allowTranscription: true }
+      );
+    });
+
+    it('should still complete install if updateOnlineMeeting fails', async () => {
+      const meetingEvent = {
+        id: 'cal-event-6',
+        subject: 'Update Fails',
+        isOnlineMeeting: true,
+        onlineMeeting: {
+          joinUrl: 'https://teams.microsoft.com/l/meetup-join/update-fails',
+        },
+      };
+
+      mockGetUpcomingOnlineMeetings.mockResolvedValue({ value: [meetingEvent] });
+      mockGetOnlineMeetingByJoinUrl.mockResolvedValue({
+        id: 'online-meeting-id-6',
+        chatInfo: { threadId: '19:meeting_updatefails@thread.v2' },
+      });
+      mockGetInstalledAppsInChat.mockResolvedValue({ value: [] });
+      mockInstallAppInChat.mockResolvedValue({});
+      mockUpdateOnlineMeeting.mockRejectedValue(new Error('Forbidden'));
+
+      const result = await handler(makeScheduledEvent());
+      const body = JSON.parse(result.body);
+      // Install still counts as success even if update fails
+      expect(body.installed).toBeGreaterThanOrEqual(1);
+      expect(body.errors).toBe(0);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Graph Change Notification handling
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('Graph change notifications', () => {
+    it('should echo validationToken for subscription validation', async () => {
+      const event = {
+        path: '/bot/notifications',
+        rawPath: '/bot/notifications',
+        queryStringParameters: { validationToken: 'test-token-12345' },
+      };
+
+      const result = await handler(event);
+      expect(result.statusCode).toBe(200);
+      expect(result.headers['content-type']).toBe('text/plain; charset=utf-8');
+      expect(result.body).toBe('test-token-12345');
+    });
+
+    it('should handle lifecycle notification path', async () => {
+      const event = {
+        path: '/bot/lifecycle',
+        rawPath: '/bot/lifecycle',
+        queryStringParameters: { validationToken: 'lifecycle-token-abc' },
+      };
+
+      const result = await handler(event);
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toBe('lifecycle-token-abc');
+    });
+
+    it('should reject notifications with invalid clientState', async () => {
+      const event = {
+        path: '/bot/notifications',
+        rawPath: '/bot/notifications',
+        queryStringParameters: {},
+        body: JSON.stringify({
+          value: [
+            {
+              clientState: 'wrong-state',
+              resource: "users/u1/onlineMeetings('m1')/transcripts('t1')",
+              resourceData: { '@odata.type': '#Microsoft.Graph.callTranscript' },
+            },
+          ],
+        }),
+      };
+
+      const result = await handler(event);
+      expect(result.statusCode).toBe(202);
+      // Should not attempt to process (getOnlineMeeting not called)
+      expect(mockGetOnlineMeeting).not.toHaveBeenCalled();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Bot/user removal (membersRemoved)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('membersRemoved', () => {
+    it('should clear cache when bot is removed from meeting chat', async () => {
+      // Return a session with join_url so the autoinstall cache can be cleared
+      mockDynamoGet.mockReturnValue({
+        promise: () =>
+          Promise.resolve({
+            Item: {
+              meeting_id: 'test-meeting-id',
+              join_url: 'https://teams.microsoft.com/l/meetup-join/test',
+              status: 'bot_installed',
+            },
+          }),
+      });
+
+      const activity = {
+        type: 'conversationUpdate',
+        membersRemoved: [{ id: '28:test-bot-app-id', name: 'Meeting Fetcher' }],
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {
+          meeting: { id: 'test-meeting-id' },
+        },
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.action).toBe('bot_removed');
+
+      // Should write bot_removed session + clear autoinstall cache
+      expect(mockDynamoPut).toHaveBeenCalled();
+      const putCalls = mockDynamoPut.mock.calls.map((c) => c[0].Item);
+      const removedSession = putCalls.find((i) => i.meeting_id === 'test-meeting-id');
+      expect(removedSession.status).toBe('bot_removed');
+
+      const autoinstallCleared = putCalls.find((i) => i.meeting_id.startsWith('autoinstall:'));
+      expect(autoinstallCleared).toBeDefined();
+      expect(autoinstallCleared.status).toBe('bot_removed');
+      expect(autoinstallCleared.recording_configured).toBe(false);
+    });
+
+    it('should send debug message when a user is removed', async () => {
+      const activity = {
+        type: 'conversationUpdate',
+        membersRemoved: [{ id: '29:other-user', name: 'Bob' }],
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.action).toBe('user_removed');
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Member(s) removed');
+      expect(debugText).toContain('Bob');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // installationUpdate
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('installationUpdate', () => {
+    it('should handle app install event', async () => {
+      const activity = {
+        type: 'installationUpdate',
+        action: 'add',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { aadObjectId: 'user-aad-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.action).toBe('install_add');
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('installationUpdate');
+      expect(debugText).toContain('add');
+    });
+
+    it('should clear cache on app uninstall', async () => {
+      const activity = {
+        type: 'installationUpdate',
+        action: 'remove',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { aadObjectId: 'user-aad-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {
+          meeting: { id: 'test-meeting-id' },
+        },
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.action).toBe('install_remove');
+      expect(mockDynamoPut).toHaveBeenCalled();
+      const session = mockDynamoPut.mock.calls[0][0].Item;
+      expect(session.status).toBe('uninstalled');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Message reactions, edits, deletes
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('messageReaction', () => {
+    it('should send debug message for reactions', async () => {
+      const activity = {
+        type: 'messageReaction',
+        reactionsAdded: [{ type: 'like' }],
+        reactionsRemoved: [],
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { name: 'Alice', aadObjectId: 'alice-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Reaction');
+      expect(debugText).toContain('like');
+      expect(debugText).toContain('Alice');
+    });
+  });
+
+  describe('messageUpdate', () => {
+    it('should send debug message for edited messages', async () => {
+      const activity = {
+        type: 'messageUpdate',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { name: 'Bob', aadObjectId: 'bob-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Message edited');
+      expect(debugText).toContain('Bob');
+    });
+  });
+
+  describe('messageDelete', () => {
+    it('should send debug message for deleted messages', async () => {
+      const activity = {
+        type: 'messageDelete',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { name: 'Carol', aadObjectId: 'carol-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Message deleted');
+      expect(debugText).toContain('Carol');
+    });
+  });
+
+  describe('typing indicator', () => {
+    it('should silently acknowledge typing indicators', async () => {
+      const activity = {
+        type: 'typing',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { name: 'Dave', aadObjectId: 'dave-id' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: {},
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      // Should NOT send a chat message for typing (too noisy)
+      expect(mockSendBotMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Meeting participant join/leave events
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('meeting participant events', () => {
+    it('should send debug when participant joins', async () => {
+      const activity = {
+        type: 'event',
+        name: 'application/vnd.microsoft.meetingParticipantJoin',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { aadObjectId: 'system' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: { meeting: { id: 'test-meeting-id' } },
+        value: {
+          members: [{ user: { name: 'Eve', aadObjectId: 'eve-id' } }],
+        },
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Participant joined');
+      expect(debugText).toContain('Eve');
+    });
+
+    it('should send debug when participant leaves', async () => {
+      const activity = {
+        type: 'event',
+        name: 'application/vnd.microsoft.meetingParticipantLeave',
+        serviceUrl: 'https://smba.trafficmanager.net/test/',
+        from: { aadObjectId: 'system' },
+        conversation: { id: '19:meeting_test@thread.v2' },
+        channelData: { meeting: { id: 'test-meeting-id' } },
+        value: {
+          members: [{ user: { name: 'Frank', aadObjectId: 'frank-id' } }],
+        },
+      };
+
+      const event = makeEvent(activity);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(mockSendBotMessage).toHaveBeenCalled();
+      const debugText = mockSendBotMessage.mock.calls[0][2];
+      expect(debugText).toContain('Participant left');
+      expect(debugText).toContain('Frank');
     });
   });
 });

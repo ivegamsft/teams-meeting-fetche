@@ -125,3 +125,16 @@ variable "poll_lookahead_minutes" {
   type        = number
   default     = 60
 }
+
+variable "graph_notification_url" {
+  description = "Base URL for Graph change notification webhooks (Lambda Function URL). Set after first deploy."
+  type        = string
+  default     = ""
+}
+
+variable "graph_notification_client_state" {
+  description = "Secret client state string for Graph notification validation"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

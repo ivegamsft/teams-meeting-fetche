@@ -243,9 +243,7 @@ async function getUpcomingOnlineMeetings(userId, lookaheadMinutes = 60) {
   const path = `/users/${userId}/calendarView?startDateTime=${startStr}&endDateTime=${endStr}&$select=${select}&$top=50`;
   const result = await graphRequest('GET', path);
   // Filter to only events that are online meetings with a joinUrl
-  const events = (result.value || []).filter(
-    (e) => e.isOnlineMeeting && e.onlineMeeting?.joinUrl
-  );
+  const events = (result.value || []).filter((e) => e.isOnlineMeeting && e.onlineMeeting?.joinUrl);
   return { ...result, value: events };
 }
 
@@ -257,12 +255,17 @@ async function getUpcomingOnlineMeetings(userId, lookaheadMinutes = 60) {
  */
 async function getOnlineMeetingByJoinUrl(userId, joinUrl) {
   let decoded = joinUrl;
-  try { decoded = decodeURIComponent(joinUrl); } catch (_) { /* already decoded */ }
+  try {
+    decoded = decodeURIComponent(joinUrl);
+  } catch (_) {
+    /* already decoded */
+  }
   const filterUrl = decoded.replace(/'/g, "''");
   const filter = `joinWebUrl eq '${filterUrl}'`;
-  const path = `/users/${userId}/onlineMeetings?$filter=${encodeURIComponent(filter)}&$select=id,chatInfo,joinWebUrl,subject`;
+  // Note: $select is not supported on the onlineMeetings filter endpoint
+  const path = `/users/${userId}/onlineMeetings?$filter=${encodeURIComponent(filter)}`;
   const result = await graphRequest('GET', path);
-  return (result.value && result.value.length > 0) ? result.value[0] : null;
+  return result.value && result.value.length > 0 ? result.value[0] : null;
 }
 
 /**
@@ -271,18 +274,26 @@ async function getOnlineMeetingByJoinUrl(userId, joinUrl) {
  * @returns {Promise<object>} Graph response with installed apps
  */
 async function getInstalledAppsInChat(chatId) {
-  return graphRequest('GET', `/chats/${chatId}/installedApps?$expand=teamsApp&$top=100`);
+  return graphRequest('GET', `/chats/${chatId}/installedApps?$expand=teamsApp`);
 }
 
 /**
- * Install a Teams app into a chat (proactive installation).
+ * Install a Teams app into a chat (proactive installation with RSC consent).
  * @param {string} chatId - The chat thread ID
  * @param {string} teamsAppId - The Teams app catalog ID (not the manifest external ID)
  * @returns {Promise<object>} Graph response
  */
 async function installAppInChat(chatId, teamsAppId) {
-  return graphRequest('POST', `/chats/${chatId}/installedApps`, {
-    'teamsApp@odata.bind': `https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/${teamsAppId}`,
+  // Use beta endpoint – consentedPermissionSet is only available on beta
+  return graphRequest('POST', `https://graph.microsoft.com/beta/chats/${chatId}/installedApps`, {
+    'teamsApp@odata.bind': `https://graph.microsoft.com/beta/appCatalogs/teamsApps/${teamsAppId}`,
+    consentedPermissionSet: {
+      resourceSpecificPermissions: [
+        { permissionValue: 'OnlineMeeting.ReadBasic.Chat', permissionType: 'Application' },
+        { permissionValue: 'OnlineMeetingTranscript.Read.Chat', permissionType: 'Application' },
+        { permissionValue: 'OnlineMeetingRecording.Read.Chat', permissionType: 'Application' },
+      ],
+    },
   });
 }
 
@@ -292,8 +303,85 @@ async function installAppInChat(chatId, teamsAppId) {
  * @returns {Promise<object[]>} Array of group members
  */
 async function getGroupMembers(groupId) {
-  const result = await graphRequest('GET', `/groups/${groupId}/members?$select=id,displayName,userPrincipalName&$top=999`);
+  const result = await graphRequest(
+    'GET',
+    `/groups/${groupId}/members?$select=id,displayName,userPrincipalName&$top=999`
+  );
   return result.value || [];
+}
+
+// ─── Graph Subscription APIs ─────────────────────────────────────────────────
+
+/**
+ * Create a Graph change notification subscription.
+ * @param {string} notificationUrl - HTTPS endpoint to receive notifications
+ * @param {string} resource - Graph resource to watch
+ * @param {string} changeType - 'created', 'updated', 'deleted'
+ * @param {number} expirationMinutes - Subscription lifetime in minutes
+ * @param {string} clientState - Secret value for notification validation
+ * @param {string} [lifecycleUrl] - Endpoint for lifecycle notifications (required if > 1h)
+ */
+async function createGraphSubscription(
+  notificationUrl,
+  resource,
+  changeType,
+  expirationMinutes,
+  clientState,
+  lifecycleUrl
+) {
+  const expirationDateTime = new Date(Date.now() + expirationMinutes * 60 * 1000).toISOString();
+  const body = {
+    changeType: changeType || 'created',
+    notificationUrl,
+    resource,
+    expirationDateTime,
+    clientState: clientState || '',
+  };
+  if (lifecycleUrl) {
+    body.lifecycleNotificationUrl = lifecycleUrl;
+  }
+  return graphRequest('POST', '/subscriptions', body);
+}
+
+/**
+ * Renew a Graph change notification subscription.
+ * @param {string} subscriptionId - The subscription ID to renew
+ * @param {number} expirationMinutes - New lifetime in minutes from now
+ */
+async function renewGraphSubscription(subscriptionId, expirationMinutes) {
+  const expirationDateTime = new Date(Date.now() + expirationMinutes * 60 * 1000).toISOString();
+  return graphRequest('PATCH', `/subscriptions/${subscriptionId}`, { expirationDateTime });
+}
+
+/**
+ * Delete a Graph change notification subscription.
+ * @param {string} subscriptionId - The subscription ID to delete
+ */
+async function deleteGraphSubscription(subscriptionId) {
+  return graphRequest('DELETE', `/subscriptions/${subscriptionId}`);
+}
+
+/**
+ * Get an online meeting by ID (look up chatInfo.threadId for posting).
+ * @param {string} userId - The meeting organizer's AAD user ID
+ * @param {string} onlineMeetingId - The online meeting ID
+ */
+async function getOnlineMeeting(userId, onlineMeetingId) {
+  return graphRequest(
+    'GET',
+    `/users/${userId}/onlineMeetings/${onlineMeetingId}?$select=id,chatInfo,subject,startDateTime,endDateTime`
+  );
+}
+
+/**
+ * Update an online meeting's settings (e.g. enable auto-recording + transcription).
+ * Requires OnlineMeetings.ReadWrite.All application permission + application access policy.
+ * @param {string} userId - The meeting organizer's AAD user ID
+ * @param {string} onlineMeetingId - The online meeting ID
+ * @param {object} patch - Properties to update (e.g. { recordAutomatically: true, allowTranscription: true })
+ */
+async function updateOnlineMeeting(userId, onlineMeetingId, patch) {
+  return graphRequest('PATCH', `/users/${userId}/onlineMeetings/${onlineMeetingId}`, patch);
 }
 
 /**
@@ -346,4 +434,9 @@ module.exports = {
   getInstalledAppsInChat,
   installAppInChat,
   getGroupMembers,
+  createGraphSubscription,
+  renewGraphSubscription,
+  deleteGraphSubscription,
+  getOnlineMeeting,
+  updateOnlineMeeting,
 };

@@ -177,4 +177,86 @@ describe('graph-client', () => {
       }
     });
   });
+
+  describe('createGraphSubscription', () => {
+    it('should POST to /subscriptions with correct body', async () => {
+      mockResponseFn = () => createMockResponse(201, { id: 'sub-123', resource: 'test/resource' });
+
+      await graphClient.createGraphSubscription(
+        'https://example.com/notify',
+        'communications/onlineMeetings/getAllTranscripts',
+        'created',
+        4230,
+        'my-secret',
+        'https://example.com/lifecycle'
+      );
+
+      expect(lastRequestOptions.path).toBe('/v1.0/subscriptions');
+      expect(lastRequestOptions.method).toBe('POST');
+      const body = JSON.parse(lastRequestBody);
+      expect(body.changeType).toBe('created');
+      expect(body.notificationUrl).toBe('https://example.com/notify');
+      expect(body.resource).toBe('communications/onlineMeetings/getAllTranscripts');
+      expect(body.clientState).toBe('my-secret');
+      expect(body.lifecycleNotificationUrl).toBe('https://example.com/lifecycle');
+    });
+  });
+
+  describe('renewGraphSubscription', () => {
+    it('should PATCH subscription with new expiration', async () => {
+      mockResponseFn = () => createMockResponse(200, { id: 'sub-123' });
+
+      await graphClient.renewGraphSubscription('sub-123', 60);
+
+      expect(lastRequestOptions.path).toBe('/v1.0/subscriptions/sub-123');
+      expect(lastRequestOptions.method).toBe('PATCH');
+      const body = JSON.parse(lastRequestBody);
+      expect(body.expirationDateTime).toBeDefined();
+    });
+  });
+
+  describe('deleteGraphSubscription', () => {
+    it('should DELETE the subscription by ID', async () => {
+      mockResponseFn = () => createMockResponse(204, '');
+
+      await graphClient.deleteGraphSubscription('sub-456');
+
+      expect(lastRequestOptions.path).toBe('/v1.0/subscriptions/sub-456');
+      expect(lastRequestOptions.method).toBe('DELETE');
+    });
+  });
+
+  describe('getOnlineMeeting', () => {
+    it('should GET meeting with select for chatInfo', async () => {
+      mockResponseFn = () =>
+        createMockResponse(200, {
+          id: 'meeting-1',
+          chatInfo: { threadId: '19:meeting_abc@thread.v2' },
+        });
+
+      const result = await graphClient.getOnlineMeeting('user-1', 'meeting-1');
+
+      expect(lastRequestOptions.path).toContain('/users/user-1/onlineMeetings/meeting-1');
+      expect(lastRequestOptions.path).toContain('$select=');
+      expect(result.chatInfo.threadId).toBe('19:meeting_abc@thread.v2');
+    });
+  });
+
+  describe('updateOnlineMeeting', () => {
+    it('should PATCH meeting with provided properties', async () => {
+      mockResponseFn = () =>
+        createMockResponse(200, { id: 'meeting-1', recordAutomatically: true });
+
+      await graphClient.updateOnlineMeeting('user-1', 'meeting-1', {
+        recordAutomatically: true,
+        allowTranscription: true,
+      });
+
+      expect(lastRequestOptions.path).toBe('/v1.0/users/user-1/onlineMeetings/meeting-1');
+      expect(lastRequestOptions.method).toBe('PATCH');
+      const body = JSON.parse(lastRequestBody);
+      expect(body.recordAutomatically).toBe(true);
+      expect(body.allowTranscription).toBe(true);
+    });
+  });
 });

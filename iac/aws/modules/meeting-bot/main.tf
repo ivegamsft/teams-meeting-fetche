@@ -116,19 +116,21 @@ resource "aws_lambda_function" "meeting_bot" {
 
   environment {
     variables = {
-      GRAPH_TENANT_ID         = var.azure_graph_tenant_id
-      GRAPH_CLIENT_ID         = var.azure_graph_client_id
-      GRAPH_CLIENT_SECRET     = var.azure_graph_client_secret
-      BOT_APP_ID              = var.azure_bot_app_id
-      BOT_APP_SECRET          = var.azure_bot_app_secret
-      ALLOWED_GROUP_ID        = var.azure_allowed_group_id
-      GROUP_CACHE_TTL_SECONDS = tostring(var.group_cache_ttl_seconds)
-      MEETINGS_TABLE          = aws_dynamodb_table.meeting_bot_sessions.name
-      CALLBACK_URL            = var.callback_url
-      TRANSCRIPT_BUCKET       = var.transcript_bucket_name
-      TEAMS_CATALOG_APP_ID    = var.teams_catalog_app_id
-      WATCHED_USER_IDS        = var.watched_user_ids
-      POLL_LOOKAHEAD_MINUTES  = tostring(var.poll_lookahead_minutes)
+      GRAPH_TENANT_ID                 = var.azure_graph_tenant_id
+      GRAPH_CLIENT_ID                 = var.azure_graph_client_id
+      GRAPH_CLIENT_SECRET             = var.azure_graph_client_secret
+      BOT_APP_ID                      = var.azure_bot_app_id
+      BOT_APP_SECRET                  = var.azure_bot_app_secret
+      ALLOWED_GROUP_ID                = var.azure_allowed_group_id
+      GROUP_CACHE_TTL_SECONDS         = tostring(var.group_cache_ttl_seconds)
+      MEETINGS_TABLE                  = aws_dynamodb_table.meeting_bot_sessions.name
+      CALLBACK_URL                    = var.callback_url
+      TRANSCRIPT_BUCKET               = var.transcript_bucket_name
+      TEAMS_CATALOG_APP_ID            = var.teams_catalog_app_id
+      WATCHED_USER_IDS                = var.watched_user_ids
+      POLL_LOOKAHEAD_MINUTES          = tostring(var.poll_lookahead_minutes)
+      GRAPH_NOTIFICATION_URL          = var.graph_notification_url
+      GRAPH_NOTIFICATION_CLIENT_STATE = var.graph_notification_client_state
     }
   }
 
