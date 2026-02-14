@@ -301,8 +301,74 @@ describe('Meeting Bot Handler', () => {
       expect(result.statusCode).toBe(200);
       // Manual record saves session
       expect(mockDynamoPut).toHaveBeenCalled();
-      const savedItem = mockDynamoPut.mock.calls[0][0].Item;
-      expect(savedItem.event_type).toBe('manual_record');
+      const savedItem = mockDynamoPut.mock.calls.find(
+        (c) => c[0].Item.event_type === 'manual_record'
+      );
+      expect(savedItem).toBeTruthy();
+      expect(savedItem[0].Item.event_type).toBe('manual_record');
+    });
+
+    it('should configure recording via Graph API when session has join_url', async () => {
+      // Mock DynamoDB to return a session with join_url and organizer_id
+      mockDynamoGet.mockReturnValueOnce({
+        promise: () =>
+          Promise.resolve({
+            Item: {
+              meeting_id: 'test-meeting-id',
+              join_url: 'https://teams.microsoft.com/l/meetup-join/test',
+              organizer_id: 'organizer-aad-id',
+              service_url: 'https://smba.trafficmanager.net/test/',
+              conversation_id: '19:meeting_test@thread.v2',
+              status: 'active',
+            },
+          }),
+      });
+      mockGetOnlineMeetingByJoinUrl.mockResolvedValueOnce({
+        id: 'online-meeting-id-1',
+        subject: 'Test',
+      });
+      mockUpdateOnlineMeeting.mockResolvedValueOnce({});
+
+      const activity = makeMessageActivity('<at>Meeting Fetcher</at> record');
+      const event = makeEvent(activity);
+
+      const result = await handler(event);
+      expect(result.statusCode).toBe(200);
+
+      // Should call Graph to resolve + patch meeting
+      expect(mockGetOnlineMeetingByJoinUrl).toHaveBeenCalledWith(
+        'organizer-aad-id',
+        'https://teams.microsoft.com/l/meetup-join/test'
+      );
+      expect(mockUpdateOnlineMeeting).toHaveBeenCalledWith(
+        'organizer-aad-id',
+        'online-meeting-id-1',
+        { recordAutomatically: true, allowTranscription: true }
+      );
+
+      // Should send success message
+      expect(mockReplyToActivity).toHaveBeenCalled();
+      const replyText = mockReplyToActivity.mock.calls[0][3];
+      expect(replyText).toContain('Auto-recording and transcription have been enabled');
+    });
+
+    it('should show warning when no join_url available for record command', async () => {
+      // Default mock returns null session (no meetingStart received)
+      const activity = makeMessageActivity('<at>Meeting Fetcher</at> record');
+      const event = makeEvent(activity);
+
+      const result = await handler(event);
+      expect(result.statusCode).toBe(200);
+
+      // Should NOT call Graph API
+      expect(mockGetOnlineMeetingByJoinUrl).not.toHaveBeenCalled();
+      expect(mockUpdateOnlineMeeting).not.toHaveBeenCalled();
+
+      // Should send warning message
+      expect(mockReplyToActivity).toHaveBeenCalled();
+      const replyText = mockReplyToActivity.mock.calls[0][3];
+      expect(replyText).toContain('Could not configure recording');
+      expect(replyText).toContain('Start recording');
     });
 
     it('should recognize "status" command', async () => {

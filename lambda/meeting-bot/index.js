@@ -732,24 +732,151 @@ async function handleManualRecord(activity) {
     conversationId: conversationId.substring(0, 40),
   });
 
-  // Save a session so meetingEnd can find it later
+  // Look up existing session (from meetingStart) to get joinUrl + organizer
+  const session = await getSession(meetingId);
+  let joinUrl = (session && session.join_url) || '';
+  let organizerId = (session && session.organizer_id) || userId;
+
+  // ── Fallback: if no session/joinUrl, query Graph for active meetings ───
+  // This handles the case where meetingStart was missed (e.g. Lambda crash)
+  if (!joinUrl && userId && isRealUserId(userId)) {
+    log('INFO', 'No stored session – querying Graph for active meetings', {
+      meetingId,
+      userId,
+      conversationId: conversationId.substring(0, 40),
+    });
+    try {
+      // Extract the thread ID from the conversation to match against chatInfo
+      // conversationId format: "19:meeting_xxx@thread.v2"
+      const threadId = conversationId;
+      const meetings = await graph.getUpcomingOnlineMeetings(userId, 120); // look 2h ahead+behind
+      const events = meetings.value || [];
+
+      log('INFO', 'Calendar events found', { count: events.length });
+
+      // For each calendar event with a joinUrl, resolve the online meeting
+      // and check if its chatInfo.threadId matches our conversation
+      for (const evt of events) {
+        const evtJoinUrl = evt.onlineMeeting?.joinUrl || '';
+        if (!evtJoinUrl) continue;
+
+        try {
+          const om = await graph.getOnlineMeetingByJoinUrl(userId, evtJoinUrl);
+          if (om && om.chatInfo && om.chatInfo.threadId === threadId) {
+            joinUrl = evtJoinUrl;
+            organizerId = userId;
+            log('INFO', 'Matched meeting via chatInfo.threadId', {
+              subject: evt.subject,
+              onlineMeetingId: om.id,
+              threadId,
+            });
+            break;
+          }
+        } catch (lookupErr) {
+          log('DEBUG', 'Could not resolve event meeting', {
+            subject: evt.subject,
+            error: lookupErr.message,
+          });
+        }
+      }
+
+      if (!joinUrl) {
+        log('WARN', 'No matching meeting found in calendar for this chat', {
+          meetingId,
+          threadId,
+          eventCount: events.length,
+        });
+      }
+    } catch (calErr) {
+      log('WARN', 'Calendar query failed', { error: calErr.message });
+    }
+  }
+
+  // Save / update session so meetingEnd can find it later
   await saveSession({
     meeting_id: meetingId,
     status: 'active',
-    join_url: '', // we don't have it from a message context
-    title: '(manual trigger)',
-    organizer_id: userId,
+    join_url: joinUrl,
+    title: (session && session.title) || '(manual trigger)',
+    organizer_id: organizerId,
     service_url: serviceUrl,
     conversation_id: conversationId,
     event_type: 'manual_record',
     received_at: new Date().toISOString(),
   });
 
-  // Send the recording notice
-  const notice =
-    '🔴 **This meeting is being recorded and transcribed.** (manual trigger)\n\n' +
-    'A transcript will be posted to this chat when the meeting ends.\n\n' +
-    `_Session ID: \`${meetingId.substring(0, 30)}…\`_`;
+  // ── Resolve online meeting + PATCH recordAutomatically ─────────────────
+  let recordingConfigured = false;
+  let onlineMeetingId = null;
+  let configError = null;
+
+  if (joinUrl && organizerId && isRealUserId(organizerId)) {
+    try {
+      log('INFO', 'Resolving online meeting for record command', {
+        meetingId,
+        organizerId,
+        joinUrl: joinUrl.substring(0, 80),
+      });
+      const onlineMeeting = await graph.getOnlineMeetingByJoinUrl(organizerId, joinUrl);
+      if (onlineMeeting) {
+        onlineMeetingId = onlineMeeting.id;
+        log('INFO', 'Online meeting resolved, patching recording settings', {
+          meetingId,
+          onlineMeetingId,
+        });
+        await graph.updateOnlineMeeting(organizerId, onlineMeetingId, {
+          recordAutomatically: true,
+          allowTranscription: true,
+        });
+        recordingConfigured = true;
+        log('INFO', 'Recording + transcription enabled via Graph API', {
+          meetingId,
+          onlineMeetingId,
+        });
+      } else {
+        configError = 'Could not resolve online meeting from join URL';
+        log('WARN', configError, { meetingId, joinUrl: joinUrl.substring(0, 80) });
+      }
+    } catch (err) {
+      configError = err.message;
+      log('ERROR', 'Failed to configure recording via Graph', {
+        meetingId,
+        error: err.message,
+        statusCode: err.statusCode,
+      });
+    }
+  } else {
+    configError = !joinUrl
+      ? 'No matching meeting found in your calendar for this chat'
+      : 'No valid organizer ID to call Graph API';
+    log('WARN', 'Cannot configure recording via Graph', {
+      meetingId,
+      hasJoinUrl: !!joinUrl,
+      hasOrganizer: !!organizerId,
+      reason: configError,
+    });
+  }
+
+  // Build response message
+  let notice;
+  if (recordingConfigured) {
+    notice =
+      '✅ **Auto-recording configured for this meeting.**\n\n' +
+      '`recordAutomatically` and `allowTranscription` have been set via Graph API.\n\n' +
+      '⚠️ **Note:** This setting takes effect on the next meeting start. ' +
+      'If the meeting is already in progress, please start recording manually:\n' +
+      '**⋯ → Record and transcribe → Start recording**\n\n' +
+      'A transcript will be posted to this chat when the meeting ends.\n\n' +
+      `_Session ID: \`${meetingId.substring(0, 30)}…\`_`;
+  } else {
+    notice =
+      '⚠️ **Could not configure recording via Graph API.**\n\n' +
+      `Reason: ${configError}\n\n` +
+      'Please start recording manually from the meeting toolbar:\n' +
+      '**⋯ → Record and transcribe → Start recording**\n\n' +
+      'A transcript will still be posted to this chat when the meeting ends.\n\n' +
+      `_Session ID: \`${meetingId.substring(0, 30)}…\`_`;
+  }
 
   try {
     if (activityId) {
@@ -757,12 +884,12 @@ async function handleManualRecord(activity) {
     } else {
       await graph.sendBotMessage(serviceUrl, conversationId, notice);
     }
-    log('INFO', 'Manual recording notice sent', { meetingId });
+    log('INFO', 'Manual recording notice sent', { meetingId, recordingConfigured });
   } catch (err) {
     log('ERROR', 'Failed to send manual recording notice', { meetingId, error: err.message });
   }
 
-  return respond(200, { ok: true, action: 'manual_record', meetingId });
+  return respond(200, { ok: true, action: 'manual_record', meetingId, recordingConfigured });
 }
 
 // ─── Status command ──────────────────────────────────────────────────────────
