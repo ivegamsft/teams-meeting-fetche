@@ -1,3 +1,6 @@
+# Task tracking (local only)
+tasks/
+
 # Dependencies
 node_modules/
 package-lock.json

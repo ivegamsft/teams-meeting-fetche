@@ -76,15 +76,15 @@ After Terraform deployment, record your existing Graph API subscriptions:
 
 ```bash
 python scripts/aws/subscription-tracker.py save \
-  --id "05b3417a-89c9-4831-8282-04b834767f0d" \
-  --resource "users/boldoriole@ibuyspy.net/events" \
-  --expiry "2026-02-13T22:30:15Z" \
+  --id "<CALENDAR_SUBSCRIPTION_ID>" \
+  --resource "users/<YOUR_EMAIL>/events" \
+  --expiry "<EXPIRY_DATETIME>" \
   --type "calendar"
 
 python scripts/aws/subscription-tracker.py save \
-  --id "15e81c83-f8e8-4f0c-8108-2c3a65451c91" \
-  --resource "users/boldoriole@ibuyspy.net/onlineMeetings/getAllTranscripts(...)" \
-  --expiry "2026-02-14T03:34:59Z" \
+  --id "<TRANSCRIPT_SUBSCRIPTION_ID>" \
+  --resource "users/<YOUR_EMAIL>/onlineMeetings/getAllTranscripts(...)" \
+  --expiry "<EXPIRY_DATETIME>" \
   --type "transcript"
 ```
 

@@ -46,6 +46,44 @@ resource "azurerm_storage_container" "containers" {
   depends_on = [azurerm_role_assignment.deployment_storage]
 }
 
+// Diagnostic settings — send storage logs to Log Analytics
+resource "azurerm_monitor_diagnostic_setting" "storage" {
+  count = var.log_analytics_workspace_id != "" ? 1 : 0
+
+  name                       = "${var.storage_account_name}-diag"
+  target_resource_id         = azurerm_storage_account.main.id
+  log_analytics_workspace_id = var.log_analytics_workspace_id
+
+  enabled_metric {
+    category = "Transaction"
+  }
+}
+
+// Diagnostic settings for blob service
+resource "azurerm_monitor_diagnostic_setting" "storage_blob" {
+  count = var.log_analytics_workspace_id != "" ? 1 : 0
+
+  name                       = "${var.storage_account_name}-blob-diag"
+  target_resource_id         = "${azurerm_storage_account.main.id}/blobServices/default"
+  log_analytics_workspace_id = var.log_analytics_workspace_id
+
+  enabled_log {
+    category = "StorageRead"
+  }
+
+  enabled_log {
+    category = "StorageWrite"
+  }
+
+  enabled_log {
+    category = "StorageDelete"
+  }
+
+  enabled_metric {
+    category = "Transaction"
+  }
+}
+
 // Grant Storage Blob Data Contributor to application service principal
 resource "azurerm_role_assignment" "app_storage" {
   scope                = azurerm_storage_account.main.id

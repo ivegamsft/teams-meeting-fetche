@@ -5,15 +5,17 @@ Create a Teams meeting automatically for testing.
 import sys
 import os
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 import requests
 from datetime import datetime, timedelta
 import json
 
+config = get_config()
+
 def create_meeting():
     """Create a Teams meeting with transcription enabled."""
     
-    user_email = "boldoriole@ibuyspy.net"
+    user_email = config['user_email']
     
     # Meeting starts in 5 minutes
     start_time = datetime.utcnow() + timedelta(minutes=5)

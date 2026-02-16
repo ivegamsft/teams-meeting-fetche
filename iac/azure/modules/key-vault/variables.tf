@@ -52,6 +52,12 @@ variable "app_principal_id" {
   type        = string
 }
 
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics workspace ID for diagnostic settings (empty to skip)"
+  type        = string
+  default     = ""
+}
+
 variable "secrets" {
   description = "Map of secrets to store in Key Vault (key = secret name, value = secret value)"
   type        = map(string)

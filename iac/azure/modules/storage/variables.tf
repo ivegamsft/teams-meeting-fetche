@@ -47,6 +47,12 @@ variable "app_principal_id" {
   type        = string
 }
 
+variable "log_analytics_workspace_id" {
+  description = "Log Analytics workspace ID for diagnostic settings (empty to skip)"
+  type        = string
+  default     = ""
+}
+
 variable "container_names" {
   description = "List of container names to create"
   type        = list(string)

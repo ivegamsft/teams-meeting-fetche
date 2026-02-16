@@ -3,19 +3,21 @@
 Update transcript subscription to use direct Lambda Function URL
 Eliminates API Gateway layer - simpler, more direct
 """
+import os
 import requests
 import sys
 from datetime import datetime, timedelta, timezone
 
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
+config = get_config()
 headers = get_graph_headers()
-user_email = "boldoriole@ibuyspy.net"
+user_email = config.get('user_email')
 
 # Direct Lambda Function URL (no API Gateway)
-webhook_url = "https://deyehwh2y34qk6yrsfsrrri36m0syhsj.lambda-url.us-east-1.on.aws/"
-sub_id = "801b3487-83eb-4f26-abb1-7e0570c7aa8e"
+webhook_url = os.getenv('LAMBDA_FUNCTION_URL', 'https://<YOUR_LAMBDA_URL>.lambda-url.us-east-1.on.aws/')
+sub_id = os.getenv('SUBSCRIPTION_ID', '<YOUR_SUBSCRIPTION_ID>')
 
 print("🔄 Updating subscription to use direct Lambda URL...")
 print(f"   Subscription ID: {sub_id}")

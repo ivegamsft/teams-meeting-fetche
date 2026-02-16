@@ -14,14 +14,15 @@
 
 - **auth_helper.py** - Graph API authentication (used by all scripts)
 - **list-subscriptions.py** - List active Graph subscriptions
+- **check-subscriptions.py** - Check subscription status and health
+- **investigate-subscriptions.py** - Deep-dive subscription diagnostics
+- **create-transcript-subscription.py** - Create transcript-only webhook subscription
 - **check-transcripts.py** - List available transcripts
 - **trigger-webhook-manual.py** - Send test webhook payload to Lambda
 - **trigger-webhook-with-transcripts.py** - Send test webhook with real transcript data
 
 ## Maintenance
 
-- **recreate-transcript-subscription.py** - Recreate transcript webhook subscription
-- **create_transcript_subscription.py** - Create transcript subscription (similar to 02, for transcripts only)
 - **create-meeting-started-subscription.py** - Deprecated (Graph meeting-start subscriptions unsupported)
 - **create-meeting-subscription.py** - Deprecated wrapper (use Teams bot framework instead)
 

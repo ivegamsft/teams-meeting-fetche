@@ -22,8 +22,11 @@ webhook_secret = config.get('webhook_secret', '')
 # First, get the actual transcript IDs from the user's recent meetings
 print("\n📋 Fetching recent transcripts from Graph API...")
 
-user_id = "e5fe8748-76f0-42ed-b521-241e8252baba"
-user_email = "boldoriole@ibuyspy.net"
+user_email = config.get('user_email')
+
+# Resolve user ID from email
+user_resp = requests.get(f'https://graph.microsoft.com/v1.0/users/{user_email}', headers=headers, timeout=10)
+user_id = user_resp.json()['id']
 
 transcript_url = f"https://graph.microsoft.com/v1.0/users/{user_id}/onlineMeetings/getAllTranscripts(meetingOrganizerUserId='{user_id}')"
 

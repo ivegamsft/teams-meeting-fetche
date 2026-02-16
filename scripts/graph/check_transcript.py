@@ -3,10 +3,11 @@ import sys
 import requests
 import json
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
+config = get_config()
 headers = get_graph_headers()
-user_email = "boldoriole@ibuyspy.net"
+user_email = config['user_email']
 event_id = "AAMkADE2ZWVhN2MyLTk1ODEtNGIzNS1hNTE4LTE5NDIxMmU3MThmYwBGAAAAAADcy-qe0uwnTLsenzfp1HZwBwBVPDqwqy6eTbfdML59OyqKAAAAAAENAABVPDqwqy6eTbfdML59OyqKAAAGmmJTAAA="
 
 # Get event details

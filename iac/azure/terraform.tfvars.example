@@ -21,6 +21,9 @@ create_test_user = true
 # Bot App Display Name (optional)
 bot_app_display_name = "Teams Meeting Fetcher Bot"
 
+# Bot messaging endpoint (API Gateway or Lambda Function URL + /bot/messages)
+bot_messaging_endpoint = "https://<API_GATEWAY_ID>.execute-api.us-east-1.amazonaws.com/dev/bot/messages"
+
 # Firewall allowlist (required for Key Vault and Storage access)
 # Example: allowed_ip_addresses = ["203.0.113.10", "198.51.100.25"]
 allowed_ip_addresses = []

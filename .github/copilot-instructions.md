@@ -8,7 +8,7 @@
 az account show --query "tenantId" --output tsv
 ```
 
-The expected tenant ID is `62837751-4e48-4d06-8bcb-57be1a669b78` (ibuyspy.net).
+The expected tenant ID is `<YOUR_TENANT_ID>` (set in GRAPH_TENANT_ID env var).
 
 - If the tenant does NOT match, **STOP** and ask the user to log in to the correct tenant.
 - Do NOT proceed with any Azure modifications on the wrong tenant.

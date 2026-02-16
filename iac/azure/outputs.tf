@@ -178,10 +178,10 @@ output "appinsights_app_id" {
 
 output "bot_service_name" {
   description = "Azure Bot Service resource name"
-  value       = azurerm_bot_service_azure_bot.meeting_bot.name
+  value       = module.bot_service.bot_service_name
 }
 
 output "bot_messaging_endpoint" {
   description = "Bot messaging endpoint URL"
-  value       = azurerm_bot_service_azure_bot.meeting_bot.endpoint
+  value       = module.bot_service.bot_messaging_endpoint
 }

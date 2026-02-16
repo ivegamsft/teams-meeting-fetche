@@ -7,7 +7,7 @@ import requests
 from auth_helper import get_graph_headers, get_config
 
 config = get_config()
-user_email = config.get('user_email', 'boldoriole@ibuyspy.net')
+user_email = config['user_email']
 
 headers = get_graph_headers()
 

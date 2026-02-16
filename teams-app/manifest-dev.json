@@ -23,7 +23,7 @@
   },
   "accentColor": "#004578",
   "permissions": ["identity"],
-  "validDomains": ["h0m58vi4y5.execute-api.us-east-1.amazonaws.com"],
+  "validDomains": ["${{BOT_DOMAIN}}"],
   "defaultInstallScope": "meetings",
   "defaultGroupCapability": {
     "team": "bot",
@@ -31,7 +31,7 @@
     "meetings": "tab"
   },
   "webApplicationInfo": {
-    "id": "47b8b5b3-45de-4087-86d6-5f6687ef7c90"
+    "id": "${{BOT_APP_ID}}"
   },
   "authorization": {
     "permissions": {
@@ -53,7 +53,7 @@
   },
   "configurableTabs": [
     {
-      "configurationUrl": "https://h0m58vi4y5.execute-api.us-east-1.amazonaws.com/dev/bot/config",
+      "configurationUrl": "https://${{BOT_DOMAIN}}/dev/bot/config",
       "canUpdateConfiguration": false,
       "scopes": ["groupChat"],
       "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
@@ -61,7 +61,7 @@
   ],
   "bots": [
     {
-      "botId": "47b8b5b3-45de-4087-86d6-5f6687ef7c90",
+      "botId": "${{BOT_APP_ID}}",
       "scopes": ["team", "groupChat"],
       "supportsFiles": false,
       "isNotificationOnly": false,

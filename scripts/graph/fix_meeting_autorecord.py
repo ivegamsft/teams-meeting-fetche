@@ -2,9 +2,10 @@
 import sys, re, urllib.parse
 sys.path.append('scripts/graph')
 import requests
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
-user_email = 'boldoriole@ibuyspy.net'
+config = get_config()
+user_email = config['user_email']
 event_id = 'AAMkADE2ZWVhN2MyLTk1ODEtNGIzNS1hNTE4LTE5NDIxMmU3MThmYwBGAAAAAADcy-qe0uwnTLsenzfp1HZwBwBVPDqwqy6eTbfdML59OyqKAAAAAAENAABVPDqwqy6eTbfdML59OyqKAAAKnSStAAA='
 
 print("🔧 Fixing meeting auto-record...")

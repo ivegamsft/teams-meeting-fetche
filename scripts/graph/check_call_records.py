@@ -3,8 +3,9 @@ import sys
 import requests
 from datetime import datetime, timedelta
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
+config = get_config()
 headers = get_graph_headers()
 
 print("🔍 Accessing call records...")
@@ -53,7 +54,7 @@ if resp.status_code == 200:
     
     # Try to list recordings for the user
     print("\n📹 Checking for user recordings...")
-    user_email = "boldoriole@ibuyspy.net"
+    user_email = config['user_email']
     
     # Note: Recordings are typically accessed via OnlineMeetings, not CallRecords directly
     # But we can try to find the online meeting IDs from call records

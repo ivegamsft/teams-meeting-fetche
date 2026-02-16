@@ -2,10 +2,11 @@
 import sys
 sys.path.append('scripts/graph')
 import requests
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 from datetime import datetime, timedelta
 
-user_email = 'boldoriole@ibuyspy.net'
+config = get_config()
+user_email = config['user_email']
 headers = get_graph_headers()
 
 # Get last 3 days + next 3 days

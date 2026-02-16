@@ -20,18 +20,18 @@
 
 .EXAMPLE
   ./scripts/teams/register-bot.ps1 `
-    -BotAppId "47b8b5b3-45de-4087-86d6-5f6687ef7c90" `
-    -MessagingEndpoint "https://h0m58vi4y5.execute-api.us-east-1.amazonaws.com/bot/messages" `
+    -BotAppId $env:BOT_APP_ID `
+    -MessagingEndpoint $env:BOT_MESSAGING_ENDPOINT `
     -ResourceGroup "tmf-bot-rg" `
     -BotName "meeting-fetcher-bot"
 #>
 
 param(
   [Parameter(Mandatory=$false)]
-  [string]$BotAppId = "47b8b5b3-45de-4087-86d6-5f6687ef7c90",
+  [string]$BotAppId = $env:BOT_APP_ID,
 
   [Parameter(Mandatory=$false)]
-  [string]$MessagingEndpoint = "https://h0m58vi4y5.execute-api.us-east-1.amazonaws.com/bot/messages",
+  [string]$MessagingEndpoint = $env:BOT_MESSAGING_ENDPOINT,
 
   [Parameter(Mandatory=$false)]
   [string]$ResourceGroup = "tmf-bot-rg",

@@ -65,6 +65,7 @@ def get_config():
         'tenant_id': os.getenv('GRAPH_TENANT_ID'),
         'client_id': os.getenv('GRAPH_CLIENT_ID'),
         'client_secret': os.getenv('GRAPH_CLIENT_SECRET'),
+        'user_email': os.getenv('USER_EMAIL'),
         'group_id': os.getenv('ENTRA_GROUP_ID'),
         'webhook_url': os.getenv('AWS_WEBHOOK_ENDPOINT') or os.getenv('AZURE_WEBHOOK_ENDPOINT'),
         'webhook_secret': os.getenv('WEBHOOK_AUTH_SECRET'),

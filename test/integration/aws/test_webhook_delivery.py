@@ -6,6 +6,7 @@ import pytest
 import requests
 import boto3
 import json
+import os
 import time
 from datetime import datetime, timezone
 
@@ -15,7 +16,7 @@ def aws_config():
     """Load AWS configuration from Terraform outputs or environment"""
     # TODO: Read from ../../../iac/aws/terraform.tfstate or environment
     return {
-        'webhook_url': 'https://xszdr2r589.execute-api.us-east-1.amazonaws.com/dev/graph',
+        'webhook_url': os.getenv('AWS_WEBHOOK_ENDPOINT', 'https://<API_GATEWAY_ID>.execute-api.us-east-1.amazonaws.com/dev/graph'),
         's3_bucket': 'tmf-webhook-payloads-dev',
         'region': 'us-east-1',
         'profile': 'tmf-dev'

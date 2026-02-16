@@ -9,7 +9,7 @@ Usage:
     python 05-fetch-transcript.py <user_email> <meeting_id> <transcript_id>
     
 Example (using data from webhook notification):
-    python 05-fetch-transcript.py boldoriole@ibuyspy.net MSo...__ MSM...
+    python 05-fetch-transcript.py user@example.com MSo...__ MSM...
 """
 
 import sys
@@ -147,7 +147,7 @@ def main():
         epilog="""
 Examples:
   # Fetch transcript using IDs from webhook notification
-  python 05-fetch-transcript.py boldoriole@ibuyspy.net MSo123...__ MSM456...
+  python 05-fetch-transcript.py user@example.com MSo123...__ MSM456...
   
   # Save to file
   python 05-fetch-transcript.py user@domain.com meeting_id transcript_id --output transcript.vtt

@@ -2,14 +2,15 @@
 import requests
 import sys
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
 print("=" * 80)
 print("📋 TRANSCRIPT AND RECORDING CHECK")
 print("=" * 80)
 
+config = get_config()
 headers = get_graph_headers()
-user_email = "boldoriole@ibuyspy.net"
+user_email = config['user_email']
 
 # Get user info first
 print(f"\n1️⃣  Getting user information...")

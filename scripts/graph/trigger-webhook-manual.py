@@ -24,19 +24,23 @@ print(f"   Auth Secret: {webhook_secret[:20]}..." if webhook_secret else "   Aut
 
 # Example transcript notification payload (real structure from Graph API)
 # This simulates what Microsoft Graph sends when a transcript is created
+# Replace <USER_OID> with the actual user object ID from Azure AD
+sample_user_id = "<USER_OID>"
+sample_transcript_id = "MiMjSEVYX0lEX0hFUkU="
+
 notification_payload = {
     "value": [
         {
-            "subscriptionId": "15e81c83-f8e8-4f0c-8108-2c3a65451c91",
+            "subscriptionId": "00000000-0000-0000-0000-000000000000",
             "changeType": "created",
             "clientState": webhook_secret,
-            "resource": "users/e5fe8748-76f0-42ed-b521-241e8252baba/onlineMeetings/getAllTranscripts(meetingOrganizerUserId='e5fe8748-76f0-42ed-b521-241e8252baba')/MiMjMWU1ZmU4NzQ4LTc2ZjAtNDJlZC1iNTIxLTI0MWU4MjUyYmFiYTYyODM3NzUxLTRlNDgtNGQwNi04YmNiLTU3YmUxYTY2OWI3ODA0MDAwMDAwODIwMEUwMDA3NEM1QjcxM0ZBODJFMDA4MDAwMDAwMDA4ZTFlYzVhMzRkOWNkYzAxMDAwMDAwMDAwMDAwMDAwMDEwMDAwMDAwNzlhOGEwNWI2ZGJiMDY0MmI5YjBhYzYxYjBkZWIxMDMjIzUyMjMyY2MyLWFkZjItNDM2Yi05YmY5LTc1MWJiOWZhYmY5YQ==",
+            "resource": f"users/{sample_user_id}/onlineMeetings/getAllTranscripts(meetingOrganizerUserId='{sample_user_id}')/{sample_transcript_id}",
             "resourceData": {
                 "@odata.type": "#Microsoft.Graph.onlineMeetingTranscript",
-                "@odata.id": "users/e5fe8748-76f0-42ed-b521-241e8252baba/onlineMeetings/getAllTranscripts(meetingOrganizerUserId='e5fe8748-76f0-42ed-b521-241e8252baba')/MiMjMWU1ZmU4NzQ4LTc2ZjAtNDJlZC1iNTIxLTI0MWU4MjUyYmFiYTYyODM3NzUxLTRlNDgtNGQwNi04YmNiLTU3YmUxYTY2OWI3ODA0MDAwMDAwODIwMEUwMDA3NEM1QjcxM0ZBODJFMDA4MDAwMDAwMDA4ZTFlYzVhMzRkOWNkYzAxMDAwMDAwMDAwMDAwMDAwMDEwMDAwMDAwNzlhOGEwNWI2ZGJiMDY0MmI5YjBhYzYxYjBkZWIxMDMjIzUyMjMyY2MyLWFkZjItNDM2Yi05YmY5LTc1MWJiOWZhYmY5YQ==",
-                "id": "MiMjMWU1ZmU4NzQ4LTc2ZjAtNDJlZC1iNTIxLTI0MWU4MjUyYmFiYTYyODM3NzUxLTRlNDgtNGQwNi04YmNiLTU3YmUxYTY2OWI3ODA0MDAwMDAwODIwMEUwMDA3NEM1QjcxM0ZBODJFMDA4MDAwMDAwMDA4ZTFlYzVhMzRkOWNkYzAxMDAwMDAwMDAwMDAwMDAwMDEwMDAwMDAwNzlhOGEwNWI2ZGJiMDY0MmI5YjBhYzYxYjBkZWIxMDMjIzUyMjMyY2MyLWFkZjItNDM2Yi05YmY5LTc1MWJiOWZhYmY5YQ=="
+                "@odata.id": f"users/{sample_user_id}/onlineMeetings/getAllTranscripts(meetingOrganizerUserId='{sample_user_id}')/{sample_transcript_id}",
+                "id": sample_transcript_id
             },
-            "tenantId": "e5fe8748-76f0-42ed-b521-241e8252baba",
+            "tenantId": "<YOUR_TENANT_ID>",
             "sequenceNumber": 1,
             "lifecycleEvent": "missed"
         }

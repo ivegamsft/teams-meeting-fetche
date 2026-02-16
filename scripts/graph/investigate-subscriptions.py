@@ -26,7 +26,7 @@ test_resources = [
     "/communications/calls",
     
     # Different format - specific meeting
-    "users/boldoriole@ibuyspy.net/onlineMeetings",
+    "users/<YOUR_EMAIL>/onlineMeetings",
     
     # Call records (might exist)
     "communications/callRecords",

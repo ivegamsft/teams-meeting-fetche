@@ -9,7 +9,7 @@ Usage:
     # Save subscription when created
     python scripts/aws/subscription-tracker.py save \
       --id "15e81c83-f8e8-4f0c-8108-2c3a65451c91" \
-      --resource "users/boldoriole@ibuyspy.net/onlineMeetings/getAllTranscripts(...)" \
+      --resource "users/<YOUR_EMAIL>/onlineMeetings/getAllTranscripts(...)" \
       --expiry "2026-02-14T03:34:59Z" \
       --type "transcript"
     

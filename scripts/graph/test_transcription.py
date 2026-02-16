@@ -3,10 +3,11 @@ import sys
 import requests
 from datetime import datetime, timedelta
 sys.path.append("scripts/graph")
-from auth_helper import get_graph_headers
+from auth_helper import get_graph_headers, get_config
 
+config = get_config()
 headers = get_graph_headers()
-user_email = "boldoriole@ibuyspy.net"
+user_email = config['user_email']
 
 start_time = datetime.now().replace(microsecond=0) + timedelta(hours=2)
 end_time = start_time + timedelta(hours=1)

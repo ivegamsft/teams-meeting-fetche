@@ -28,8 +28,8 @@ python scripts/graph/05-fetch-transcript.py user@domain.com meeting_id transcrip
 
 ```bash
 python scripts/graph/05-fetch-transcript.py \
-  boldoriole@ibuyspy.net \
-  MSoe5fe8748-76f0-42ed-b521-241e8252baba__19:meeting_abc123... \
+  user@example.com \
+  MSo<USER_OID>__19:meeting_abc123... \
   MSMjk5OTEyMzQ1...
 ```
 
@@ -80,10 +80,10 @@ When a transcript becomes available, you'll receive a notification like:
 {
   "value": [
     {
-      "subscriptionId": "2080e968-ac5b-47c9-aca1-37d26f65a8c6",
+      "subscriptionId": "<SUBSCRIPTION_ID>",
       "changeType": "created",
       "clientState": "your-client-state",
-      "resource": "users/boldoriole@ibuyspy.net/onlineMeetings/MSo.../transcripts/MSM...",
+      "resource": "users/user@example.com/onlineMeetings/MSo.../transcripts/MSM...",
       "resourceData": {
         "id": "MSM...",
         "@odata.type": "#Microsoft.Graph.callTranscript",
@@ -121,7 +121,7 @@ Another Speaker: Thanks for joining!
 1. **Create subscription** (already done):
 
    ```bash
-   python create_transcript_subscription.py
+   python 02-create-webhook-subscription.py
    ```
 
 2. **Create and conduct meeting**:
@@ -185,6 +185,6 @@ Required permissions (already configured):
 
 **No webhook received:**
 
-- Check subscription expiration: `python create_transcript_subscription.py`
+- Check subscription expiration: `python list-subscriptions.py`
 - Verify CloudWatch logs for Lambda execution
 - Ensure meeting had recording + transcription enabled

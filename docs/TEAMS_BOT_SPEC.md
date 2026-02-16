@@ -653,7 +653,7 @@ resource "aws_cloudwatch_metric_alarm" "recording_failures" {
 ```bash
 # Add new permissions to app registration
 az ad app permission add \
-  --id fd190b50-0567-4c80-ad1f-36eaab452db7 \
+  --id <YOUR_GRAPH_CLIENT_ID> \
   --api 00000003-0000-0000-c000-000000000000 \
   --api-permissions \
     16409ce7-e136-4f61-8878-27f2aef8fac2=Role \
@@ -662,7 +662,7 @@ az ad app permission add \
 
 # Grant admin consent
 az ad app permission admin-consent \
-  --id fd190b50-0567-4c80-ad1f-36eaab452db7
+  --id <YOUR_GRAPH_CLIENT_ID>
 
 # Create Teams bot registration
 # (Manual step in Azure Portal → Bot Services)
