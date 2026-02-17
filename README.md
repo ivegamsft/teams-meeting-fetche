@@ -59,12 +59,117 @@ python 02-create-webhook-subscription.py
 # ... etc
 ```
 
+## GitHub Actions & Automated Deployments
+
+This project uses GitHub Actions workflows for CI/CD, testing, and deployment to AWS and Azure.
+
+### Setup GitHub Workflows
+
+To enable automated deployments, you need to configure AWS IAM and Azure Service Principal credentials:
+
+**[📖 Complete Setup Guide: `.github/GITHUB_WORKFLOWS_SETUP.md`](./.github/GITHUB_WORKFLOWS_SETUP.md)**
+
+Quick setup:
+
+```bash
+# For AWS
+bash scripts/setup-github-aws-iam.sh
+
+# For Azure
+bash scripts/setup-github-azure-spn.sh
+
+# Verify secrets are configured
+bash scripts/verify-github-secrets.sh
+```
+
+See [Workflow Documentation](./.github/workflows/) for details on each workflow.
+
+### Available Workflows
+
+- **test-and-lint** - Linting, type checking, and unit tests (PR/push)
+- **terraform-validate** - Terraform format and validation (PR)
+- **security-scan** - Secret detection and npm vulnerabilities (PR/push)
+- **build-lambda** - Package Lambda functions (push to develop)
+- **deploy-aws** - Deploy to AWS (push to main)
+- **deploy-azure** - Deploy to Azure (push to main)
+- **e2e-integration-tests** - Full integration tests with Graph API
+- **release** - Create GitHub releases and package artifacts
+- **package-teams-app** - Package and validate Teams app manifest
+
+## Bootstrap & Setup Automation
+
+New to the project? Use these guides to set up a complete local or cloud environment.
+
+### Bootstrap Prompts (Copilot Agents)
+
+These are detailed step-by-step guides for common setup tasks. Use with [Copilot](https://github.com/features/copilot):
+
+1. **[`bootstrap-dev-env.prompt.md`](./.github/prompts/bootstrap-dev-env.prompt.md)** — Local development environment
+   - Install Node.js, Python dependencies
+   - Configure AWS CLI profile
+   - Create Azure SPN
+   - Initialize databases
+   - Verify setup
+
+2. **[`bootstrap-teams-config.prompt.md`](./.github/prompts/bootstrap-teams-config.prompt.md)** — Teams bot registration & policies
+   - Register bot in Azure AD
+   - Create security group
+   - Configure Teams admin policies
+   - Create webhook subscriptions
+   - Upload Teams app
+
+3. **[`bootstrap-azure-spn.prompt.md`](./.github/prompts/bootstrap-azure-spn.prompt.md)** — Azure Service Principal setup
+   - Create SPN for deployments
+   - Assign roles and permissions
+   - Configure Key Vault
+   - Set up GitHub Actions credentials
+
+4. **[`bootstrap-aws-iam.prompt.md`](./.github/prompts/bootstrap-aws-iam.prompt.md)** — AWS IAM configuration
+   - Create IAM user for development
+   - Create Lambda execution role
+   - Set up S3 deployment bucket
+   - Configure GitHub Actions credentials
+
+5. **[`bootstrap-gh-workflow-creds.prompt.md`](./.github/prompts/bootstrap-gh-workflow-creds.prompt.md)** — GitHub Actions secrets
+   - Configure AWS credentials
+   - Configure Azure credentials
+   - Set up notifications
+   - Test workflows
+
+### Teams Configuration Inventory
+
+Audit and document your current Teams bot setup:
+
+```bash
+# Quick start (Windows PowerShell)
+.\scripts\teams\run-inventory.ps1
+
+# Or Python (all platforms)
+python scripts/teams/run-inventory.py
+```
+
+This exports:
+
+- Azure AD app registrations
+- Security group memberships
+- Teams admin policies
+- Webhook subscriptions
+- Lambda/API configuration
+- Complete reproduction guide
+
+**Documentation:**
+
+- [TEAMS_INVENTORY_AUTOMATION.md](./docs/TEAMS_INVENTORY_AUTOMATION.md) — How to use the inventory system
+- [TEAMS_INVENTORY_SCRIPTS_REFERENCE.md](./docs/TEAMS_INVENTORY_SCRIPTS_REFERENCE.md) — Script architecture & troubleshooting
+
 ### Prerequisites
 
 - Node.js 18+
 - Microsoft Entra tenant with admin access
 - Target Entra group created
 - Server with HTTPS capability (for webhooks)
+- (Optional) AWS Account for Lambda deployments
+- (Optional) Azure Subscription for cloud deployments
 
 ### 1. Create App Registration
 
