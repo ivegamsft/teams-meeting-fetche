@@ -89,6 +89,11 @@ logs/
 *.log
 log/
 
+# Teams inventory outputs
+inventory/
+scripts/teams/inventory/
+teams-config-inventory-*.zip
+
 # Runtime data
 pids/
 *.pid
