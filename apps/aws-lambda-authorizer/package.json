@@ -4,6 +4,8 @@
   "description": "Lambda authorizer for Microsoft Graph webhook callbacks",
   "main": "authorizer.js",
   "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
     "package": "zip -r authorizer.zip authorizer.js package.json"
   },
   "keywords": [
@@ -13,5 +15,8 @@
     "webhook"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
 }

@@ -69,11 +69,14 @@ When events occur, Microsoft sends notifications:
 }
 ```
 
-**Authorizer Action**:
+**Authorizer Action** (Security Layer):
 
-- ✅ Validates `clientState` matches your configured secret
-- ✅ Allows request if valid
-- ❌ Denies request if invalid or missing
+1. **Parse the request body** and extract all notifications
+2. **Validate each notification's `clientState`** against `CLIENT_STATE` environment variable
+3. **Allow request** only if ALL notifications match the expected clientState
+4. **Deny request** if any notification has invalid or missing clientState
+
+This ensures malicious or spoofed webhook requests are rejected at the API Gateway level before reaching the Lambda handler.
 
 ## Configuration
 

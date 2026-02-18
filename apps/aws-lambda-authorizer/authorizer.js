@@ -24,10 +24,29 @@ exports.handler = async (event) => {
       return generatePolicy('user', 'Allow', event.methodArn);
     }
 
-    // CASE 2: POST request - allow and let the handler enforce clientState
+    // CASE 2: POST request - validate clientState
     if (method === 'POST') {
-      console.log('POST request detected, allowing (handler will validate clientState)');
-      return generatePolicy('user', 'Allow', event.methodArn);
+      const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      const notifications = body.value || [];
+      
+      if (notifications.length === 0) {
+        console.log('POST request with no notifications, denying');
+        return generatePolicy('user', 'Deny', event.methodArn);
+      }
+      
+      const allValid = notifications.every((notification) => {
+        const match = notification.clientState === expectedClientState;
+        console.log(`Notification clientState validation: ${match ? 'PASS' : 'FAIL'} (expected: ${expectedClientState}, got: ${notification.clientState})`);
+        return match;
+      });
+      
+      if (allValid) {
+        console.log('All notifications passed clientState validation, allowing');
+        return generatePolicy('user', 'Allow', event.methodArn);
+      } else {
+        console.log('clientState validation failed, denying');
+        return generatePolicy('user', 'Deny', event.methodArn);
+      }
     }
 
     // Default: deny any other request type
