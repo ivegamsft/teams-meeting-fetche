@@ -88,7 +88,6 @@ resource "aws_iam_role_policy" "meeting_bot_dynamodb_indexes" {
 
 // Policy for S3 transcript storage
 resource "aws_iam_role_policy" "meeting_bot_s3" {
-  count = var.transcript_bucket_arn != "" ? 1 : 0
   name  = "${var.function_name}-s3"
   role  = aws_iam_role.meeting_bot_role.id
 

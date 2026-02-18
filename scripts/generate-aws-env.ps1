@@ -10,8 +10,9 @@ if (-not (Test-Path $IaCDir)) {
   exit 1
 }
 
-Push-Location $IaCDir
+$originalLocation = Get-Location
 try {
+  Push-Location $IaCDir
   $json = terraform output -json
   if (-not $json) {
     Write-Error "Terraform output is empty. Run 'terraform apply' first."
@@ -44,15 +45,13 @@ try {
     "ENTRA_GROUP_ID=<REPLACE_ME>",
     "",
     "# Optional: Event Grid",
-    "EVENTGRID_URI=$($eventGridUri ? $eventGridUri : '<REPLACE_ME>')",
-    "EVENTGRID_KEY=$($eventGridKey ? $eventGridKey : '<REPLACE_ME>')"
+    "EVENTGRID_URI=$(if ($eventGridUri) { $eventGridUri } else { '<REPLACE_ME>' })",
+    "EVENTGRID_KEY=$(if ($eventGridKey) { $eventGridKey } else { '<REPLACE_ME>' })"
   ) -join "`n"
 
   Pop-Location
   Set-Content -Path $OutputFile -Value $content -Encoding UTF8
   Write-Host "Wrote $OutputFile"
 } finally {
-  if ((Get-Location).Path -eq (Resolve-Path $IaCDir).Path) {
-    Pop-Location
-  }
+  Pop-Location
 }
