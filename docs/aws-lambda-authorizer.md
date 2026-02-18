@@ -7,12 +7,26 @@ The AWS infrastructure now includes a Lambda REQUEST authorizer that validates a
 ## Architecture
 
 ```
-Microsoft Graph → API Gateway → Lambda Authorizer → Webhook Writer Lambda → S3
-                      ↓
-                  Validates:
-                  - validationToken (GET)
-                  - clientState (POST)
+Microsoft Graph        Teams Bot Framework
+         ↓                     ↓
+   /graph endpoint      /bot/* endpoints
+         ↓                     ↓
+  API Gateway with Lambda Authorizer
+         ↓
+    Validates:
+    - validationToken (GET /graph)
+    - clientState (POST /graph)
+    - clientState (POST /bot/*)
+         ↓
+ If Valid ─→ Lambda Handler → (Webhook Writer or Bot)
+ If Invalid → Deny (403)
 ```
+
+**Protected Endpoints:**
+- `POST /graph` - Microsoft Graph webhook notifications
+- `GET /graph` - Subscription validation requests  
+- `POST /bot/callbacks` - Bot framework callbacks
+- `POST /bot/messages` - Bot message handling
 
 ## Security Benefits
 
@@ -77,6 +91,36 @@ When events occur, Microsoft sends notifications:
 4. **Deny request** if any notification has invalid or missing clientState
 
 This ensures malicious or spoofed webhook requests are rejected at the API Gateway level before reaching the Lambda handler.
+
+## 3. Bot API Routes (POST /bot/callbacks, /bot/messages)
+
+The same authorizer also protects the bot's webhook routes:
+
+```
+Teams Bot Framework → API Gateway → Lambda Authorizer → Meeting Bot Lambda
+```
+
+**Authorizer Action**:
+
+1. **Validate `clientState`** from the request body (same validation as Graph webhooks)
+2. **Allow request** if clientState is valid
+3. **Deny request** (403) if clientState is missing or invalid
+
+This provides consistent security across both the Graph webhook receiver and the bot message handler, protecting against unauthorized bot interactions.
+
+### Example Bot Route Request
+
+```bash
+curl -X POST https://your-api.execute-api.us-east-1.amazonaws.com/dev/bot/callbacks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientState": "your-configured-secret",
+    "botId": "bot-123",
+    "message": "..."
+  }'
+```
+
+The authorizer will validate the `clientState` before the bot handler processes the request.
 
 ## Configuration
 
