@@ -1,6 +1,8 @@
-# Teams Meeting Fetcher - Communication Flow Diagrams
+# Teams Meeting Fetcher - Communication Flow Diagrams — Manual/Bootstrap Approach
 
-> **Note**: This document provides a consolidated overview. For detailed documentation with sample payloads and infrastructure references, see the individual flow documents in [`docs/flows/`](./flows/).
+> **Code-Based Alternative**: For production deployment using Infrastructure as Code (Terraform) and source code references, see the [code-based flow documentation](./flows/README.md).
+>
+> **This Document**: Consolidated overview of communication flows with emphasis on manual bootstrap scripts and step-by-step setup instructions.
 
 Complete communication flows between Microsoft Graph, Azure AD, AWS Lambda, and the Teams bot service.
 

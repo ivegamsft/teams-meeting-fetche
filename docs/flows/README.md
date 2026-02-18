@@ -1,15 +1,16 @@
-# Communication Flow Diagrams
+# Communication Flow Diagrams — Code-Based Implementation
 
-Complete communication flows between Microsoft Graph, Azure AD, AWS Lambda, and the Teams bot service.
+Complete communication flows with **infrastructure-as-code (IaC) and source code references** for production deployment and runtime behavior.
 
-## Flow Diagrams
+## Code-Based Flows
 
 Each flow is documented in a separate file with:
 
-- Sequence diagram showing the complete interaction
-- Sample payloads from actual webhook notifications
-- Infrastructure components with references to Terraform resources
-- Source code references with file paths and line numbers
+- **Sequence diagram** showing the complete interaction
+- **Sample payloads** from actual webhook notifications
+- **IaC Definition (Primary)**: Terraform modules for infrastructure provisioning
+- **Source code references**: Production code with file paths and line numbers
+- **Runtime Locations**: Where each component executes (AWS Lambda, local scripts, Terraform)
 
 ### Available Flows
 
@@ -45,9 +46,19 @@ The system uses the following AWS infrastructure components:
 
 All infrastructure is defined in Terraform under [`iac/aws/`](../../iac/aws/).
 
-## Related Documentation
+## Documentation Structure
 
-- [Main Documentation](../COMMUNICATION_FLOW_DIAGRAMS.md) - Original consolidated document
+This directory provides **code-based flows** with emphasis on:
+- **Terraform/IaC** as the primary deployment method
+- **Production code** (Node.js, Python) with exact file locations
+- **Runtime context** (where code executes)
+
+### Alternative Documentation
+
+- **[COMMUNICATION_FLOW_DIAGRAMS.md](../COMMUNICATION_FLOW_DIAGRAMS.md)** — Manual/bootstrap flow for initial setup using scripts and manual steps (alternative to IaC)
+
+### Related Resources
+
 - [Webhook Specification](../../specs/docs/webhook-specification.md)
 - [Infrastructure Spec](../../specs/infrastructure-minimal-serverless-spec.md)
 - [Setup Guide](../../specs/setup-guide.md)
