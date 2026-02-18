@@ -179,10 +179,10 @@ Content-Length: 458
 
 **1. Lambda Authorizer**
 
-- Module: [`modules/authorizer`](../../iac/aws/modules/authorizer/)
+- Module: [../../iac/aws/modules/authorizer/](../../iac/aws/modules/authorizer/)
 - Resource: `aws_lambda_function.authorizer`
 - Purpose: Allows POST requests to proceed to handler
-- Code: [`apps/aws-lambda-authorizer/authorizer.js`](../../apps/aws-lambda-authorizer/authorizer.js) lines 28-31
+- Code: [../../apps/aws-lambda-authorizer/authorizer.js](../../apps/aws-lambda-authorizer/authorizer.js) lines 28-31
 
 ```javascript
 if (event.httpMethod === 'POST') {
@@ -194,9 +194,9 @@ if (event.httpMethod === 'POST') {
 
 **2. Webhook Handler Lambda**
 
-- Module: [`modules/lambda`](../../iac/aws/modules/lambda/)
+- Module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
 - Resource: `aws_lambda_function.webhook_handler`
-- Code: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- Code: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
 - Purpose: Validates clientState and stores notification to S3
 - Key Operations:
   - Parse JSON body (lines 21-37)
@@ -207,7 +207,7 @@ if (event.httpMethod === 'POST') {
 
 **3. S3 Bucket**
 
-- Module: [`modules/storage`](../../iac/aws/modules/storage/)
+- Module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
 - Resource: `aws_s3_bucket.webhook_storage`
 - Purpose: Persistent storage for webhook notifications
 - Key Format: `webhooks/{ISO-timestamp}-{requestId}.json`
@@ -215,7 +215,7 @@ if (event.httpMethod === 'POST') {
 
 **4. IAM Role for Lambda**
 
-- Module: [`modules/lambda`](../../iac/aws/modules/lambda/)
+- Module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
 - Resource: `aws_iam_role.lambda_role`
 - Managed Policies:
   - `AWSLambdaBasicExecutionRole` - CloudWatch Logs
@@ -229,11 +229,17 @@ if (event.httpMethod === 'POST') {
 
 ## Source Code References
 
+### IaC Definition (Primary)
+
+- Authorizer module: [../../iac/aws/modules/authorizer/](../../iac/aws/modules/authorizer/)
+- Lambda module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
+- Storage module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
+
 ### Webhook Handler Implementation (Primary)
 
 **Lambda Handler** (production code)
 
-- File: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- File: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
   - Body parsing (lines 21-37): Parses JSON webhook body
   - clientState validation (lines 44-48): Compares against CLIENT_STATE env var
   - S3 storage (lines 59-75): Stores to `webhooks/{timestamp}-{requestId}.json`
@@ -242,7 +248,7 @@ if (event.httpMethod === 'POST') {
 
 **Lambda Authorizer** (production code)
 
-- File: [`apps/aws-lambda-authorizer/authorizer.js`](../../apps/aws-lambda-authorizer/authorizer.js)
+- File: [../../apps/aws-lambda-authorizer/authorizer.js](../../apps/aws-lambda-authorizer/authorizer.js)
   - POST allow (lines 28-31): Allows all POST requests
   - IAM policy (line 48): Generates authorization policy
   - MethodArn parsing: Extracts authorization context
@@ -251,7 +257,13 @@ if (event.httpMethod === 'POST') {
 
 **Polling Script** (used for inspecting stored webhooks)
 
-- File: [`scripts/graph/check_latest_webhook.py`](../../scripts/graph/check_latest_webhook.py) lines 30-60
+- File: [../../scripts/graph/check_latest_webhook.py](../../scripts/graph/check_latest_webhook.py) lines 30-60
+
+## Runtime Locations
+
+- API Gateway and Lambda authorizer/handler run in AWS.
+- S3 bucket and CloudWatch logs are AWS resources provisioned by Terraform.
+- Polling script runs locally from `scripts/graph/`.
   - Lists recent webhook objects from S3
   - Filters by prefix and date
   - **Purpose**: Debug webhook retrieval

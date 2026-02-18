@@ -172,14 +172,14 @@ WEBVTT
 
 **1. Webhook Handler Lambda**
 
-- Module: [`modules/lambda`](../../iac/aws/modules/lambda/)
+- Module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
 - Purpose: Receives recording notification and stores to S3
 - Same handler as meeting creation notifications
-- Code: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- Code: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
 
 **2. S3 Bucket**
 
-- Module: [`modules/storage`](../../iac/aws/modules/storage/)
+- Module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
 - Purpose: Stores two types of data:
   - Webhook notifications: `webhooks/timestamp-requestId.json`
   - Downloaded transcripts: `transcripts/meetingId/*.vtt` (optional)
@@ -201,11 +201,16 @@ Typical timeline:
 
 ## Source Code References
 
+### IaC Definition (Primary)
+
+- Lambda module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
+- Storage module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
+
 ### Webhook Storage (Primary)
 
 Recording notifications use the same handler as meeting notifications:
 
-- File: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js) lines 21-82
+- File: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js) lines 21-82
   - S3 storage (lines 59-75): Same storage mechanism for all webhook types
   - No special logic for recording vs. meeting events
   - Stores to S3 with timestamp-based key
@@ -214,7 +219,13 @@ Recording notifications use the same handler as meeting notifications:
 
 **Interactive Polling Script** (used for manual testing)
 
-- File: [`scripts/graph/04-poll-transcription.py`](../../scripts/graph/04-poll-transcription.py)
+- File: [../../scripts/graph/04-poll-transcription.py](../../scripts/graph/04-poll-transcription.py)
+
+## Runtime Locations
+
+- Webhook handler runs in AWS Lambda.
+- S3 bucket and CloudWatch logs are AWS resources provisioned by Terraform.
+- Transcript polling script runs locally from `scripts/graph/`.
   - `get_meeting_recordings()` (lines 26-36) - Get recording list
   - `get_call_transcripts()` (lines 39-50) - Check transcript availability
   - `download_transcript_content()` (lines 53-65) - Download VTT content

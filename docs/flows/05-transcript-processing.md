@@ -223,7 +223,7 @@ This represents how you might parse and structure the VTT content:
 
 **1. S3 Bucket - Webhook Storage**
 
-- Module: [`modules/storage`](../../iac/aws/modules/storage/)
+- Module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
 - Resource: `aws_s3_bucket.webhook_storage`
 - Purpose: Store all webhook notifications
 - Access Pattern:
@@ -240,9 +240,9 @@ This represents how you might parse and structure the VTT content:
 
 **3. Lambda Handler**
 
-- Module: [`modules/lambda`](../../iac/aws/modules/lambda/)
+- Module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
 - Purpose: Store webhooks from Graph
-- Code: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- Code: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
 - No special processing for transcript events
 
 ### Local Processing
@@ -256,11 +256,16 @@ This represents how you might parse and structure the VTT content:
 
 ## Source Code References
 
+### IaC Definition (Primary)
+
+- Storage module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
+- Lambda module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
+
 ### Webhook Retrieval (Primary)
 
 **S3 Bucket Storage** (production code)
 
-- File: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js) lines 59-75
+- File: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js) lines 59-75
   - Stores all webhook notifications to S3
   - Key format: `webhooks/{timestamp}-{requestId}.json`
   - Used by all webhook types (meeting created, recording, transcript)
@@ -269,7 +274,7 @@ This represents how you might parse and structure the VTT content:
 
 **Interactive Polling Script** (used for manual testing)
 
-- File: [`scripts/graph/04-poll-transcription.py`](../../scripts/graph/04-poll-transcription.py)
+- File: [../../scripts/graph/04-poll-transcription.py](../../scripts/graph/04-poll-transcription.py)
   - `get_meeting_recordings()` (lines 26-36) - Get recording list
   - `get_call_transcripts()` (lines 39-50) - Check transcript availability
   - `download_transcript_content()` (lines 53-65) - Download VTT content
@@ -278,7 +283,13 @@ This represents how you might parse and structure the VTT content:
 
 **Webhook Inspection Script** (used for manual inspection)
 
-- File: [`scripts/graph/check_latest_webhook.py`](../../scripts/graph/check_latest_webhook.py) lines 30-60
+- File: [../../scripts/graph/check_latest_webhook.py](../../scripts/graph/check_latest_webhook.py) lines 30-60
+
+## Runtime Locations
+
+- Webhook handler runs in AWS Lambda.
+- S3 storage is an AWS resource provisioned by Terraform.
+- Polling and inspection scripts run locally from `scripts/graph/`.
   - Lists recent webhook payloads from S3
   - Parses and displays webhook details
   - **Purpose**: Debug and inspect webhook storage

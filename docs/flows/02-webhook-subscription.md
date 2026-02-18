@@ -138,11 +138,11 @@ Validate.0123456789abcdef
 
 ### AWS Resources (Terraform)
 
-All resources defined in [`iac/aws/main.tf`](../../iac/aws/main.tf):
+All resources defined in [../../iac/aws/main.tf](../../iac/aws/main.tf):
 
 **1. API Gateway REST API**
 
-- Module: [`modules/api-gateway`](../../iac/aws/modules/api-gateway/)
+- Module: [../../iac/aws/modules/api-gateway/](../../iac/aws/modules/api-gateway/)
 - Resource: `aws_api_gateway_rest_api.webhook_api`
 - Purpose: Exposes `/graph` endpoint for receiving Graph webhooks
 - Configuration:
@@ -153,10 +153,10 @@ All resources defined in [`iac/aws/main.tf`](../../iac/aws/main.tf):
 
 **2. Lambda Authorizer**
 
-- Module: [`modules/authorizer`](../../iac/aws/modules/authorizer/)
+- Module: [../../iac/aws/modules/authorizer/](../../iac/aws/modules/authorizer/)
 - Resource: `aws_lambda_function.authorizer`
 - Purpose: Validates incoming requests before Lambda execution
-- Code: [`apps/aws-lambda-authorizer/authorizer.js`](../../apps/aws-lambda-authorizer/authorizer.js)
+- Code: [../../apps/aws-lambda-authorizer/authorizer.js](../../apps/aws-lambda-authorizer/authorizer.js)
 - Configuration:
   - Runtime: `nodejs18.x`
   - Handler: `authorizer.handler`
@@ -168,10 +168,10 @@ All resources defined in [`iac/aws/main.tf`](../../iac/aws/main.tf):
 
 **3. Webhook Handler Lambda**
 
-- Module: [`modules/lambda`](../../iac/aws/modules/lambda/)
+- Module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
 - Resource: `aws_lambda_function.webhook_handler`
 - Purpose: Echoes validationToken or processes webhook notifications
-- Code: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- Code: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
 - Configuration:
   - Runtime: `nodejs18.x`
   - Handler: `handler.handler`
@@ -181,7 +181,7 @@ All resources defined in [`iac/aws/main.tf`](../../iac/aws/main.tf):
 
 **4. S3 Bucket**
 
-- Module: [`modules/storage`](../../iac/aws/modules/storage/)
+- Module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
 - Resource: `aws_s3_bucket.webhook_storage`
 - Purpose: Stores webhook notification payloads
 - Configuration:
@@ -199,7 +199,7 @@ All resources defined in [`iac/aws/main.tf`](../../iac/aws/main.tf):
 
 ### Terraform Variables
 
-Required variables in [`iac/aws/terraform.tfvars`](../../iac/aws/terraform.tfvars.example):
+Required variables in [iac/aws/terraform.tfvars.example](iac/aws/terraform.tfvars.example):
 
 ```hcl
 # Webhook Security
@@ -215,11 +215,19 @@ authorizer_package_path  = "../../apps/aws-lambda-authorizer/package.zip"
 
 ## Source Code References
 
+### IaC Definition (Primary)
+
+- Terraform entrypoint: [../../iac/aws/main.tf](../../iac/aws/main.tf)
+- API Gateway module: [../../iac/aws/modules/api-gateway/](../../iac/aws/modules/api-gateway/)
+- Authorizer module: [../../iac/aws/modules/authorizer/](../../iac/aws/modules/authorizer/)
+- Lambda module: [../../iac/aws/modules/lambda/](../../iac/aws/modules/lambda/)
+- Storage module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
+
 ### Webhook Handler Implementation (Primary)
 
 **Lambda Handler** (production code)
 
-- File: [`apps/aws-lambda/handler.js`](../../apps/aws-lambda/handler.js)
+- File: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
   - Validation token echo (lines 11-19): Echoes `validationToken` for subscription handshake
   - Binary payload handling (lines 21-37): Parses JSON webhook body
   - clientState validation (lines 44-48): Validates security token
@@ -228,7 +236,7 @@ authorizer_package_path  = "../../apps/aws-lambda-authorizer/package.zip"
 
 **Lambda Authorizer** (production code)
 
-- File: [`apps/aws-lambda-authorizer/authorizer.js`](../../apps/aws-lambda-authorizer/authorizer.js)
+- File: [../../apps/aws-lambda-authorizer/authorizer.js](../../apps/aws-lambda-authorizer/authorizer.js)
   - Validation token detection (lines 22-25): Allows GET with `validationToken`
   - POST allow policy (lines 28-31): Permits all POST requests
   - IAM policy generation (line 48): Builds authorization policy
@@ -237,14 +245,20 @@ authorizer_package_path  = "../../apps/aws-lambda-authorizer/package.zip"
 
 **Interactive Script** (used for manual subscription creation/testing)
 
-- File: [`scripts/graph/02-create-webhook-subscription.py`](../../scripts/graph/02-create-webhook-subscription.py)
+- File: [../../scripts/graph/02-create-webhook-subscription.py](../../scripts/graph/02-create-webhook-subscription.py)
   - `create_subscription()` (lines 41-82) - Manually create subscription
   - `list_subscriptions()` (lines 11-36) - List active subscriptions
   - **Purpose**: Manual testing and validation
 
 ### Graph Token Acquisition (Secondary)
 
-- Auth helper: [`scripts/graph/auth_helper.py`](../../scripts/graph/auth_helper.py) lines 13-56
+- Auth helper: [../../scripts/graph/auth_helper.py](../../scripts/graph/auth_helper.py) lines 13-56
+
+## Runtime Locations
+
+- API Gateway and Lambda authorizer/handler run in AWS.
+- Terraform runs locally or in CI to provision AWS resources.
+- Subscription management scripts run locally from `scripts/graph/`.
   - `get_graph_token()` - Acquires OAuth token
   - `get_graph_headers()` - Builds Authorization header
   - **Purpose**: Manual testing

@@ -222,7 +222,7 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **1. EventBridge Rule**
 
-- Module: [`modules/subscription-renewal`](../../iac/aws/modules/subscription-renewal/)
+- Module: [../../iac/aws/modules/subscription-renewal/](../../iac/aws/modules/subscription-renewal/)
 - Resource: `aws_cloudwatch_event_rule.subscription_renewal_schedule`
 - Configuration:
   - Schedule: `cron(0 0 * * ? *)` - Daily at midnight UTC
@@ -231,10 +231,10 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **2. Renewal Lambda Function**
 
-- Module: [`modules/subscription-renewal`](../../iac/aws/modules/subscription-renewal/)
+- Module: [../../iac/aws/modules/subscription-renewal/](../../iac/aws/modules/subscription-renewal/)
 - Resource: `aws_lambda_function.subscription_renewal`
 - Purpose: Renew or recreate expiring Graph subscriptions
-- Code: [`lambda/renewal-function.py`](../../lambda/renewal-function.py)
+- Code: [../../lambda/renewal-function.py](../../lambda/renewal-function.py)
 - Configuration:
   - Runtime: `python3.11`
   - Handler: `renewal-function.handler`
@@ -250,7 +250,7 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **3. DyamoDB Subscriptions Table**
 
-- Module: [`modules/storage`](../../iac/aws/modules/storage/)
+- Module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
 - Resource: `aws_dynamodb_table.subscriptions`
 - Purpose: Track all active Graph subscriptions
 - Configuration:
@@ -261,7 +261,7 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **4. SNS Topic for Alerts**
 
-- Module: [`modules/notifications`](../../iac/aws/modules/notifications/)
+- Module: [../../iac/aws/modules/notifications/](../../iac/aws/modules/notifications/)
 - Resource: `aws_sns_topic.notifications`
 - Purpose: Send email alerts on renewal failures
 - Configuration:
@@ -270,7 +270,7 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **5. IAM Role for Lambda**
 
-- Module: [`modules/subscription-renewal`](../../iac/aws/modules/subscription-renewal/)
+- Module: [../../iac/aws/modules/subscription-renewal/](../../iac/aws/modules/subscription-renewal/)
 - Resource: `aws_iam_role.renewal_lambda_role`
 - Permissions:
   - `dynamodb:Query`, `dynamodb:UpdateItem` on subscriptions table
@@ -279,7 +279,7 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-group
 
 **6. CloudWatch Alarms**
 
-- Module: [`modules/subscription-renewal`](../../iac/aws/modules/subscription-renewal/)
+- Module: [../../iac/aws/modules/subscription-renewal/](../../iac/aws/modules/subscription-renewal/)
 - Resources:
   - `aws_cloudwatch_metric_alarm.renewal_errors` - Triggers on Lambda errors
   - `aws_cloudwatch_metric_alarm.renewal_duration` - Triggers on slow execution
@@ -318,11 +318,17 @@ output "subscriptions_table_name" {
 
 ## Source Code References
 
+### IaC Definition (Primary)
+
+- Subscription renewal module: [../../iac/aws/modules/subscription-renewal/](../../iac/aws/modules/subscription-renewal/)
+- Storage module: [../../iac/aws/modules/storage/](../../iac/aws/modules/storage/)
+- Notifications module: [../../iac/aws/modules/notifications/](../../iac/aws/modules/notifications/)
+
 ### Renewal Lambda Function (Primary)
 
 **Python Lambda Handler** (production code)
 
-- File: [`lambda/renewal-function.py`](../../lambda/renewal-function.py)
+- File: [../../lambda/renewal-function.py](../../lambda/renewal-function.py)
   - Gets fresh OAuth token (lines 23-43: `get_graph_token()`)
   - Renews expiring subscriptions via PATCH (lines 46-62: `renew_subscription()`)
   - Recreates 404 subscriptions (error handling)
@@ -334,7 +340,13 @@ output "subscriptions_table_name" {
 
 **Interactive Subscription Script** (used for manual operations)
 
-- File: [`scripts/graph/02-create-webhook-subscription.py`](../../scripts/graph/02-create-webhook-subscription.py)
+- File: [../../scripts/graph/02-create-webhook-subscription.py](../../scripts/graph/02-create-webhook-subscription.py)
+
+## Runtime Locations
+
+- Renewal function runs in AWS Lambda on an EventBridge schedule.
+- DynamoDB and SNS are AWS resources provisioned by Terraform.
+- Manual subscription script runs locally from `scripts/graph/`.
   - `renew_subscription()` (lines 121-144) - Manually renew via PATCH
   - `delete_subscription()` (lines 104-118) - Manually delete subscriptions
   - `list_subscriptions()` (lines 11-36) - List active subscriptions
