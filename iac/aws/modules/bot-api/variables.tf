@@ -30,6 +30,16 @@ variable "stage_name" {
   type        = string
 }
 
+variable "authorizer_invoke_arn" {
+  description = "Invoke ARN of the Lambda authorizer function"
+  type        = string
+}
+
+variable "authorizer_function_name" {
+  description = "Name of the Lambda authorizer function"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to API Gateway resources"
   type        = map(string)

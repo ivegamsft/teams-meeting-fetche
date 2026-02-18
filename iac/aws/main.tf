@@ -159,11 +159,13 @@ module "meeting_bot" {
 module "bot_api_gateway" {
   source = "./modules/bot-api"
 
-  api_name             = "tmf-bot-api-${var.environment}"
-  api_description      = "Teams Meeting Bot webhooks"
-  lambda_invoke_arn    = module.meeting_bot.function_arn
-  lambda_function_name = module.meeting_bot.function_name
-  stage_name           = var.environment
+  api_name                 = "tmf-bot-api-${var.environment}"
+  api_description          = "Teams Meeting Bot webhooks"
+  lambda_invoke_arn        = module.meeting_bot.function_arn
+  lambda_function_name     = module.meeting_bot.function_name
+  authorizer_invoke_arn    = module.authorizer.invoke_arn
+  authorizer_function_name = module.authorizer.function_name
+  stage_name               = var.environment
 
   tags = local.common_tags
 }
