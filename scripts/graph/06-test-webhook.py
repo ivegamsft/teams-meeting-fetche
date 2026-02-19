@@ -113,7 +113,66 @@ def main():
     print("=" * 60)
     
     print("\nTEST SCENARIOS")
-    print("=\" * 60)\n    print(\"1. Meeting created notification\")\n    print(\"2. Meeting updated notification\")\n    print(\"3. Validation token (subscription setup)\")\n    print(\"4. Run all tests\")\n    print(\"5. Custom payload\")\n    print(\"6. Exit\")\n    \n    choice = input(\"\\nSelect test (1-6): \").strip()\n    \n    if choice == \"1\":\n        test_meeting_created_notification()\n    \n    elif choice == \"2\":\n        test_meeting_updated_notification()\n    \n    elif choice == \"3\":\n        test_validation_token()\n    \n    elif choice == \"4\":\n        print(\"\\n\" + \"=\" * 60)\n        print(\"Running all tests...\")\n        print(\"=\" * 60)\n        \n        tests = [\n            (\"Validation Token\", test_validation_token),\n            (\"Meeting Created\", test_meeting_created_notification),\n            (\"Meeting Updated\", test_meeting_updated_notification)\n        ]\n        \n        results = []\n        for name, test_func in tests:\n            print(f\"\\n--- {name} ---\")\n            result = test_func()\n            results.append((name, result))\n        \n        print(\"\\n\" + \"=\" * 60)\n        print(\"TEST SUMMARY\")\n        print(\"=\" * 60)\n        for name, passed in results:\n            status = \"✅ PASS\" if passed else \"❌ FAIL\"\n            print(f\"{status}: {name}\")\n    \n    elif choice == \"5\":\n        print(\"\\nEnter custom JSON payload:\")\n        payload_str = input()\n        try:\n            payload = json.loads(payload_str)\n            config = get_config()\n            send_webhook_notification(config['webhook_url'], payload, config.get('webhook_secret'))\n        except json.JSONDecodeError:\n            print(\"❌ Invalid JSON\")\n    \n    elif choice == \"6\":\n        print(\"Exiting...\")\n    \n    else:\n        print(\"Invalid choice\")\n    \n    return 0
+    print("=" * 60)
+    print("1. Meeting created notification")
+    print("2. Meeting updated notification")
+    print("3. Validation token (subscription setup)")
+    print("4. Run all tests")
+    print("5. Custom payload")
+    print("6. Exit")
+
+    choice = input("\nSelect test (1-6): ").strip()
+
+    if choice == "1":
+        test_meeting_created_notification()
+
+    elif choice == "2":
+        test_meeting_updated_notification()
+
+    elif choice == "3":
+        test_validation_token()
+
+    elif choice == "4":
+        print("\n" + "=" * 60)
+        print("Running all tests...")
+        print("=" * 60)
+
+        tests = [
+            ("Validation Token", test_validation_token),
+            ("Meeting Created", test_meeting_created_notification),
+            ("Meeting Updated", test_meeting_updated_notification)
+        ]
+
+        results = []
+        for name, test_func in tests:
+            print(f"\n--- {name} ---")
+            result = test_func()
+            results.append((name, result))
+
+        print("\n" + "=" * 60)
+        print("TEST SUMMARY")
+        print("=" * 60)
+        for name, passed in results:
+            status = "✅ PASS" if passed else "❌ FAIL"
+            print(f"{status}: {name}")
+
+    elif choice == "5":
+        print("\nEnter custom JSON payload:")
+        payload_str = input()
+        try:
+            payload = json.loads(payload_str)
+            config = get_config()
+            send_webhook_notification(config['webhook_url'], payload, config.get('webhook_secret'))
+        except json.JSONDecodeError:
+            print("❌ Invalid JSON")
+
+    elif choice == "6":
+        print("Exiting...")
+
+    else:
+        print("Invalid choice")
+
+    return 0
 
 
 if __name__ == \"__main__\":\n    sys.exit(main())

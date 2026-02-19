@@ -40,6 +40,17 @@ These scripts check various system states:
 - **fix_meeting_autorecord.py** - Enable auto-recording on existing meeting
 - **test_transcription.py** - End-to-end transcription test
 
+## Archived (Deprecated or Duplicate)
+
+These scripts were superseded by the main workflow and moved to `scripts/archive/graph/`:
+
+- **poll-transcript.py** - Use `04-poll-transcription.py`
+- **fetch-transcript.py** - Use `05-fetch-transcript.py`
+- **check_transcript.py** - Use `check-transcripts.py`
+- **test-bot-webhook.py** - Use `06-test-webhook.py`
+- **create-test-meeting-auto.py** - Use `03-create-test-meeting.py`
+- **update-to-lambda-url.py** - Manual migration helper, no longer standard
+
 ---
 
 ## Quick Start

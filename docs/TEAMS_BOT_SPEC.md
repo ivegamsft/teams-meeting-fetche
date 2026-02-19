@@ -698,8 +698,8 @@ aws lambda update-function-code \
 ### 5. Test
 
 ```bash
-# Create test meeting
-python scripts/graph/create-test-meeting-auto.py
+# Create test meeting (interactive)
+python scripts/graph/03-create-test-meeting.py
 
 # Monitor logs
 aws logs tail /aws/lambda/tmf-meeting-bot-dev --follow
