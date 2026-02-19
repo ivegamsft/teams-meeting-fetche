@@ -104,14 +104,16 @@ resource "aws_iam_role_policy" "meeting_bot_s3" {
 }
 
 resource "aws_lambda_function" "meeting_bot" {
-  function_name    = var.function_name
-  role             = aws_iam_role.meeting_bot_role.arn
-  handler          = var.handler
-  runtime          = var.runtime
-  filename         = data.archive_file.meeting_bot_zip.output_path
-  source_code_hash = data.archive_file.meeting_bot_zip.output_base64sha256
-  timeout          = var.timeout
-  memory_size      = var.memory_size
+  function_name = var.function_name
+  role          = aws_iam_role.meeting_bot_role.arn
+  handler       = var.handler
+  runtime       = var.runtime
+  timeout       = var.timeout
+  memory_size   = var.memory_size
+  
+  # Code must be deployed separately via AWS CLI or Console
+  # filename = data.archive_file.meeting_bot_zip.output_path
+  # source_code_hash = data.archive_file.meeting_bot_zip.output_base64sha256
 
   environment {
     variables = {
@@ -143,13 +145,14 @@ resource "aws_lambda_function" "meeting_bot" {
 
 // Package the Lambda code from repo
 
-data "archive_file" "meeting_bot_zip" {
-  type        = "zip"
-  source_dir  = "${path.root}/../../lambda/meeting-bot"
-  output_path = "${path.module}/.build/meeting-bot.zip"
-
-  excludes = [".git", ".gitignore", "package-lock.json"]
-}
+# Code packaging disabled - deploy code separately via AWS CLI or Console
+# data "archive_file" "meeting_bot_zip" {
+#   type        = "zip"
+#   source_dir  = "${path.root}/../../lambda/meeting-bot"
+#   output_path = "${path.module}/.build/meeting-bot.zip"
+#
+#   excludes = [".git", ".gitignore", "package-lock.json"]
+# }
 // Lambda Function URL for direct webhook invocation (no API Gateway)
 resource "aws_lambda_function_url" "meeting_bot_webhook" {
   function_name      = aws_lambda_function.meeting_bot.function_name

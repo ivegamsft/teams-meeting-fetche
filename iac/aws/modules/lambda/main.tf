@@ -56,14 +56,16 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 
 // Lambda function
 resource "aws_lambda_function" "function" {
-  function_name    = var.function_name
-  role             = aws_iam_role.lambda_role.arn
-  handler          = var.handler
-  runtime          = var.runtime
-  filename         = var.package_path
-  source_code_hash = filebase64sha256(var.package_path)
-  timeout          = var.timeout
-  memory_size      = var.memory_size
+  function_name = var.function_name
+  role          = aws_iam_role.lambda_role.arn
+  handler       = var.handler
+  runtime       = var.runtime
+  timeout       = var.timeout
+  memory_size   = var.memory_size
+  
+  # Code must be deployed separately via AWS CLI or Console
+  # filename = var.package_path
+  # source_code_hash = filebase64sha256(var.package_path)
 
   environment {
     variables = merge(

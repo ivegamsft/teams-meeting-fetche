@@ -158,7 +158,7 @@ All resources defined in [../../iac/aws/main.tf](../../iac/aws/main.tf):
 - Purpose: Validates incoming requests before Lambda execution
 - Code: [../../apps/aws-lambda-authorizer/authorizer.js](../../apps/aws-lambda-authorizer/authorizer.js)
 - Configuration:
-  - Runtime: `nodejs18.x`
+  - Runtime: `nodejs20.x`
   - Handler: `authorizer.handler`
   - Environment: `CLIENT_STATE` (for validation)
   - Timeout: 10 seconds
@@ -173,7 +173,7 @@ All resources defined in [../../iac/aws/main.tf](../../iac/aws/main.tf):
 - Purpose: Echoes validationToken or processes webhook notifications
 - Code: [../../apps/aws-lambda/handler.js](../../apps/aws-lambda/handler.js)
 - Configuration:
-  - Runtime: `nodejs18.x`
+  - Runtime: `nodejs20.x`
   - Handler: `handler.handler`
   - Environment: `BUCKET_NAME`, `CLIENT_STATE`
   - Timeout: 30 seconds

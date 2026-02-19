@@ -343,7 +343,7 @@ resource "aws_lambda_function" "graph_webhook_processor" {
   function_name    = "tmf-graph-webhook-${var.environment}"
   role             = aws_iam_role.lambda_role.arn
   handler          = "dist/index.handler"
-  runtime          = "nodejs18.x"
+  runtime          = "nodejs20.x"
   timeout          = 60
   memory_size      = 512
   
@@ -374,7 +374,7 @@ resource "aws_lambda_layer_version" "dependencies" {
   
   source_code_hash = filebase64sha256("lambda-dependencies.zip")
   
-  compatible_runtimes = ["nodejs18.x"]
+  compatible_runtimes = ["nodejs20.x"]
 }
 ```
 
@@ -445,7 +445,7 @@ resource "aws_lambda_function" "bearer_token_authorizer" {
   function_name = "tmf-bearer-token-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "dist/authorizer.handler"
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs20.x"
   
   environment {
     variables = {

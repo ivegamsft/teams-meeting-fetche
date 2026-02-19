@@ -67,8 +67,7 @@ module "lambda" {
 
   function_name = "tmf-webhook-writer-${var.environment}"
   handler       = "handler.handler"
-  runtime       = "nodejs18.x"
-  package_path  = var.lambda_package_path
+  runtime       = "nodejs20.x"
   s3_bucket_arn = module.storage.bucket_arn
   sns_topic_arn = module.notifications.topic_arn
   timeout       = 30
@@ -91,8 +90,7 @@ module "authorizer" {
 
   function_name = "tmf-webhook-authorizer-${var.environment}"
   handler       = "authorizer.handler"
-  runtime       = "nodejs18.x"
-  package_path  = var.authorizer_package_path
+  runtime       = "nodejs20.x"
   client_state  = var.client_state
   timeout       = 10
   memory_size   = 128
@@ -130,7 +128,7 @@ module "meeting_bot" {
 
   function_name                   = "tmf-meeting-bot-${var.environment}"
   handler                         = "index.handler"
-  runtime                         = "nodejs18.x"
+  runtime                         = "nodejs20.x"
   timeout                         = 300
   memory_size                     = 512
   meetings_table_name             = "meeting-bot-sessions-${var.environment}"

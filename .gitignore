@@ -43,8 +43,15 @@ crash.*.log
 # AWS Lambda
 lambda.zip
 lambda-dependencies.zip
+*.zip
 dist/
 node_modules/
+lambda-eventhub.zip
+
+# Local development directories (environment-specific)
+nobots-eventhub/
+nobots/
+temp-lambda/
 
 # Terraform plans
 tfplan
