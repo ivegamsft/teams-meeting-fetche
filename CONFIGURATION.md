@@ -270,11 +270,11 @@ EVENTGRID_KEY=your-event-grid-access-key
 Generate `.env.local.azure` from Terraform outputs:
 
 ```powershell
-./scripts/generate-azure-env.ps1
+./scripts/config/generate-azure-env.ps1
 ```
 
 ```bash
-./scripts/generate-azure-env.sh
+./scripts/config/generate-azure-env.sh
 ```
 
 ### Key Vault (for secure credential storage)
@@ -320,11 +320,11 @@ AWS_REGION=us-east-1
 Generate `.env.local` from Terraform outputs:
 
 ```powershell
-./scripts/generate-aws-env.ps1
+./scripts/config/generate-aws-env.ps1
 ```
 
 ```bash
-./scripts/generate-aws-env.sh
+./scripts/config/generate-aws-env.sh
 ```
 
 ### AWS Credentials

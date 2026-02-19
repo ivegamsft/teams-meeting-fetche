@@ -69,7 +69,7 @@ Capture and display the outputs:
 Run the env generator to sync `.env.local` with the latest Terraform outputs:
 
 ```powershell
-powershell -File scripts/generate-aws-env.ps1
+powershell -File scripts/config/generate-aws-env.ps1
 ```
 
 Show me the generated file (redacting any secrets) and confirm it looks correct.

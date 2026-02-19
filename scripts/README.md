@@ -231,7 +231,7 @@ config = get_config()
 ### "Missing required environment variables"
 
 - Ensure `.env.local.azure` exists at repository root
-- Run `./scripts/generate-azure-env.ps1` to regenerate from Terraform
+- Run `./scripts/config/generate-azure-env.ps1` to regenerate from Terraform
 
 ### "Failed to acquire token: AADSTS700016"
 

@@ -1,5 +1,5 @@
 BeforeAll {
-    $scriptPath = "$PSScriptRoot\..\..\..\scripts\generate-azure-env.ps1"
+    $scriptPath = "$PSScriptRoot\..\..\..\scripts\config\generate-azure-env.ps1"
     $testIaCDir = "$TestDrive\iac\azure"
     $testOutputFile = "$TestDrive\.env.local.azure"
     
@@ -137,7 +137,7 @@ Describe "Generate-AWS-Env Script Tests" {
 
 Describe "Script Cross-Platform Compatibility" {
     It "Should have equivalent Bash script" {
-        $bashScript = "$PSScriptRoot\..\..\..\scripts\generate-azure-env.sh"
+        $bashScript = "$PSScriptRoot\..\..\..\scripts\config\generate-azure-env.sh"
         $bashScript | Should -Exist
     }
 

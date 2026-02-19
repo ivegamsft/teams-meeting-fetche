@@ -29,5 +29,5 @@ bot_messaging_endpoint = "https://<API_GATEWAY_ID>.execute-api.us-east-1.amazona
 allowed_ip_addresses = []
 
 # Note: Test user requires Domain.Read.All permission on the deployment SPN
-# to automatically fetch the default domain. Run scripts/bootstrap-azure-spn.ps1
-# or scripts/bootstrap-azure-spn.sh to set up the SPN with all required permissions.
+# to automatically fetch the default domain. Run scripts/setup/bootstrap-azure-spn.ps1
+# or scripts/setup/bootstrap-azure-spn.sh to set up the SPN with all required permissions.

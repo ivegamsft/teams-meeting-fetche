@@ -7,7 +7,7 @@ scoped to a **specific security group** (not tenant-wide):
 2. **Meeting Policy "Recorded Line"** — enforce transcription + auto-recording for group members
 3. **Application Access Policy** — allow the bot's Graph API app to read users' online meetings
 
-All three are configured via the PowerShell script at `scripts/setup-teams-policies.ps1`.
+All three are configured via the PowerShell script at `scripts/setup/setup-teams-policies.ps1`.
 The first two can also be configured in the [Teams Admin Center](https://admin.teams.microsoft.com);
 the Application Access Policy requires PowerShell.
 
@@ -21,13 +21,13 @@ the Application Access Policy requires PowerShell.
 
 ```powershell
 # One-liner — pass your group ID, catalog app ID, and bot app ID
-.\scripts\setup-teams-policies.ps1 `
+.\scripts\setup\setup-teams-policies.ps1 `
   -GroupId "<YOUR-GROUP-OBJECT-ID>" `
   -CatalogAppId "<YOUR-CATALOG-APP-ID>" `
   -BotAppId "<YOUR-BOT-APP-ID>"
 
 # Dry run first to see what it will do
-.\scripts\setup-teams-policies.ps1 `
+.\scripts\setup\setup-teams-policies.ps1 `
   -GroupId "<YOUR-GROUP-OBJECT-ID>" `
   -CatalogAppId "<YOUR-CATALOG-APP-ID>" `
   -BotAppId "<YOUR-BOT-APP-ID>" `

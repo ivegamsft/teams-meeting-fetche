@@ -25,9 +25,9 @@ Notes:
 Generate local environment file after apply:
 
 ```powershell
-./scripts/generate-aws-env.ps1
+./scripts/config/generate-aws-env.ps1
 ```
 
 ```bash
-./scripts/generate-aws-env.sh
+./scripts/config/generate-aws-env.sh
 ```

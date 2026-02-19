@@ -136,8 +136,8 @@ scripts/teams/run-inventory.ps1              # Windows version
 scripts/graph/01-verify-setup.py             # Verify everything works
 
 # Automation
-scripts/setup-github-aws-iam.sh              # AWS credentials
-scripts/setup-github-azure-spn.sh            # Azure credentials
+scripts/setup/setup-github-aws-iam.sh        # AWS credentials
+scripts/setup/setup-github-azure-spn.sh      # Azure credentials
 ```
 
 ---

@@ -69,7 +69,7 @@ Use the [Teams Developer Portal](https://dev.teams.microsoft.com) to register, c
 
 - Microsoft 365 account with Teams admin or developer permissions
 - Bot already registered in Azure Bot Service (see `iac/azure/` for Terraform setup)
-- App package zip built (`.\scripts\package-teams-app.ps1`)
+- App package zip built (`.\scripts\deployment\package-teams-app.ps1`)
 
 #### Step-by-Step
 
@@ -136,7 +136,7 @@ Use the [Teams Developer Portal](https://dev.teams.microsoft.com) to register, c
 
 1. Make your changes to `teams-app/manifest.json`
 2. Bump the `version` field (e.g., `1.0.1` → `1.0.2`)
-3. Repackage: `.\scripts\package-teams-app.ps1`
+3. Repackage: `.\scripts\deployment\package-teams-app.ps1`
 4. In the Developer Portal, open your app → **App package**
 5. Click **Replace** to upload the new zip
 6. Click **Publish → Publish to org** again

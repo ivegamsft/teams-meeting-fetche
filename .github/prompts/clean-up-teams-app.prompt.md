@@ -78,7 +78,7 @@ If manifests are outdated or have test values:
 
 3. Run a script to inject these values (if one exists):
    ```powershell
-   powershell -File scripts/package-teams-app.ps1
+   powershell -File scripts/deployment/package-teams-app.ps1
    ```
 
 ### Step 5: Remove Test/Build Artifacts

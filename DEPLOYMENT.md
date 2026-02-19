@@ -52,7 +52,7 @@ PowerShell module. Run this **once** after `terraform apply`:
 Install-Module -Name MicrosoftTeams -Force -Scope CurrentUser
 
 # Run the setup script
-.\scripts\setup-teams-policies.ps1 `
+.\scripts\setup\setup-teams-policies.ps1 `
   -GroupId "<SECURITY-GROUP-OBJECT-ID>" `
   -CatalogAppId "<TEAMS-CATALOG-APP-ID>" `
   -BotAppId "<BOT-APP-ID>"

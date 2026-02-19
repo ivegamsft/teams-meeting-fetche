@@ -187,13 +187,13 @@ WEBHOOK_AUTH_SECRET=random-generated-uuid-for-clientstate-validation
 
 **Bootstrap Scripts** (used for initial tenant setup)
 
-- PowerShell: [../../scripts/bootstrap-azure-spn.ps1](../../scripts/bootstrap-azure-spn.ps1)
+- PowerShell: [../../scripts/setup/bootstrap-azure-spn.ps1](../../scripts/setup/bootstrap-azure-spn.ps1)
   - Creates Azure AD Service Principal
   - Assigns required API permissions
   - Generates client secret
   - **Purpose**: One-time tenant initialization
 
-- Bash: [../../scripts/bootstrap-azure-spn.sh](../../scripts/bootstrap-azure-spn.sh)
+- Bash: [../../scripts/setup/bootstrap-azure-spn.sh](../../scripts/setup/bootstrap-azure-spn.sh)
   - Linux/macOS equivalent of PowerShell bootstrap
 
 **Debugging Scripts** (used for interactive testing)

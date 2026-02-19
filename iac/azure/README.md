@@ -166,11 +166,11 @@ terraform apply
 After deployment, generate your local `.env.local.azure` file:
 
 ```powershell
-../../scripts/generate-azure-env.ps1
+../../scripts/config/generate-azure-env.ps1
 ```
 
 ```bash
-../../scripts/generate-azure-env.sh
+../../scripts/config/generate-azure-env.sh
 ```
 
 ## Authentication Options

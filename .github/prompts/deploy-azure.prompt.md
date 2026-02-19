@@ -64,7 +64,7 @@ Capture and display key outputs:
 Run the env generator to sync `.env.local.azure` with the latest Terraform outputs:
 
 ```powershell
-powershell -File scripts/generate-azure-env.ps1
+powershell -File scripts/config/generate-azure-env.ps1
 ```
 
 Show me the generated file (redacting secrets like client secrets) and confirm it looks correct.

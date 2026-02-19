@@ -83,13 +83,13 @@ Quick setup:
 
 ```bash
 # For AWS
-bash scripts/setup-github-aws-iam.sh
+bash scripts/setup/setup-github-aws-iam.sh
 
 # For Azure
-bash scripts/setup-github-azure-spn.sh
+bash scripts/setup/setup-github-azure-spn.sh
 
 # Verify secrets are configured
-bash scripts/verify-github-secrets.sh
+bash scripts/verify/verify-github-secrets.sh
 ```
 
 See [Workflow Documentation](./.github/workflows/) for details on each workflow.
@@ -599,12 +599,12 @@ Required permissions:
 
 ```powershell
 # PowerShell
-./scripts/generate-azure-env.ps1
+./scripts/config/generate-azure-env.ps1
 ```
 
 ```bash
 # Bash
-./scripts/generate-azure-env.sh
+./scripts/config/generate-azure-env.sh
 ```
 
 This creates `.env.local.azure` with all necessary configuration from Terraform outputs.
@@ -702,11 +702,11 @@ This creates:
 After deployment:
 
 ```powershell
-./scripts/generate-aws-env.ps1  # PowerShell
+./scripts/config/generate-aws-env.ps1  # PowerShell
 ```
 
 ```bash
-./scripts/generate-aws-env.sh   # Bash
+./scripts/config/generate-aws-env.sh   # Bash
 ```
 
 Test the webhook endpoint:
@@ -768,13 +768,13 @@ server {
 After applying Terraform, generate local env files:
 
 ```powershell
-./scripts/generate-aws-env.ps1
-./scripts/generate-azure-env.ps1
+./scripts/config/generate-aws-env.ps1
+./scripts/config/generate-azure-env.ps1
 ```
 
 ```bash
-./scripts/generate-aws-env.sh
-./scripts/generate-azure-env.sh
+./scripts/config/generate-aws-env.sh
+./scripts/config/generate-azure-env.sh
 ```
 
 ---

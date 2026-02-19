@@ -205,19 +205,19 @@ Instead of manual setup, use the provided automation scripts:
 
 ```bash
 # For AWS IAM setup
-./scripts/setup-github-aws-iam.ps1  # Windows PowerShell
+./scripts/setup/setup-github-aws-iam.ps1  # Windows PowerShell
 # or
-./scripts/setup-github-aws-iam.sh   # Bash/Linux/macOS
+./scripts/setup/setup-github-aws-iam.sh   # Bash/Linux/macOS
 
 # For Azure SPN setup
-./scripts/setup-github-azure-spn.ps1  # Windows PowerShell
+./scripts/setup/setup-github-azure-spn.ps1  # Windows PowerShell
 # or
-./scripts/setup-github-azure-spn.sh   # Bash/Linux/macOS
+./scripts/setup/setup-github-azure-spn.sh   # Bash/Linux/macOS
 
 # Verify all secrets are set
-./scripts/verify-github-secrets.ps1  # Windows PowerShell
+./scripts/verify/verify-github-secrets.ps1  # Windows PowerShell
 # or
-./scripts/verify-github-secrets.sh   # Bash/Linux/macOS
+./scripts/verify/verify-github-secrets.sh   # Bash/Linux/macOS
 ```
 
 ---

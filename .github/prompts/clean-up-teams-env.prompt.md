@@ -61,7 +61,7 @@ Ask which scope to remove policies from:
 Then run the removal script:
 
 ```powershell
-powershell -File scripts/setup-teams-policies.ps1 -Action Remove -GroupId $ENTRA_GROUP_ID
+powershell -File scripts/setup/setup-teams-policies.ps1 -Action Remove -GroupId $ENTRA_GROUP_ID
 ```
 
 Or manually in Teams Admin Center:

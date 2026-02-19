@@ -36,7 +36,7 @@ Ask me which target to deploy to (AWS, Azure, or both), then:
 2. `cd iac/aws && terraform init && terraform plan -out=tfplan`
 3. Show the plan summary and ask for approval
 4. `terraform apply tfplan`
-5. Update local env: `powershell -File scripts/generate-aws-env.ps1`
+5. Update local env: `powershell -File scripts/config/generate-aws-env.ps1`
 
 **For Azure:**
 
@@ -44,7 +44,7 @@ Ask me which target to deploy to (AWS, Azure, or both), then:
 2. `cd iac/azure && terraform init && terraform plan -out=tfplan`
 3. Show the plan summary and ask for approval
 4. `terraform apply tfplan`
-5. Update local env: `powershell -File scripts/generate-azure-env.ps1`
+5. Update local env: `powershell -File scripts/config/generate-azure-env.ps1`
 
 ### Step 5: Deploy Lambda Code
 

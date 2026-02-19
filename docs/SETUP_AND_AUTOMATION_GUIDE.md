@@ -172,19 +172,19 @@ For setting up credentials:
 
 ```bash
 # AWS IAM automation
-bash scripts/setup-github-aws-iam.sh
+bash scripts/setup/setup-github-aws-iam.sh
 # or
-powershell .\scripts\setup-github-aws-iam.ps1
+powershell .\scripts\setup\setup-github-aws-iam.ps1
 
 # Azure SPN automation
-bash scripts/setup-github-azure-spn.sh
+bash scripts/setup/setup-github-azure-spn.sh
 # or
-powershell .\scripts\setup-github-azure-spn.ps1
+powershell .\scripts\setup\setup-github-azure-spn.ps1
 
 # Verify all secrets configured
-bash scripts/verify-github-secrets.sh
+bash scripts/verify/verify-github-secrets.sh
 # or
-powershell .\scripts\verify-github-secrets.ps1
+powershell .\scripts\verify\verify-github-secrets.ps1
 ```
 
 ---

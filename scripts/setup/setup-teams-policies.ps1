@@ -27,10 +27,10 @@
     If set, only shows what would be done without making changes.
 
 .EXAMPLE
-    .\setup-teams-policies.ps1 -GroupId "<GROUP-ID>" -CatalogAppId "<CATALOG-ID>" -BotAppId "<BOT-APP-ID>"
+    .\scripts\setup\setup-teams-policies.ps1 -GroupId "<GROUP-ID>" -CatalogAppId "<CATALOG-ID>" -BotAppId "<BOT-APP-ID>"
 
 .EXAMPLE
-    .\setup-teams-policies.ps1 -GroupId "<GROUP-ID>" -CatalogAppId "<CATALOG-ID>" -BotAppId "<BOT-APP-ID>" -DryRun
+    .\scripts\setup\setup-teams-policies.ps1 -GroupId "<GROUP-ID>" -CatalogAppId "<CATALOG-ID>" -BotAppId "<BOT-APP-ID>" -DryRun
 #>
 
 param(

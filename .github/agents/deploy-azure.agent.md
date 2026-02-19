@@ -97,7 +97,7 @@ Show the plan summary and ask: "Do you want to apply this plan? (yes/no)"
 
 ### Step 5: Update Local Environment
 
-1. Run `powershell -File scripts/generate-azure-env.ps1`
+1. Run `powershell -File scripts/config/generate-azure-env.ps1`
 2. Show the generated `.env.local.azure` (with secrets redacted)
 3. Confirm it looks correct
 
