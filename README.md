@@ -2,6 +2,16 @@
 
 Automatically record Microsoft Teams meetings and fetch transcriptions with webhook-based notifications. Deploy on-premises, self-hosted, or to Azure with Terraform.
 
+## 🔒 Security
+
+**✅ Secret Scan Status: PASSED** - No hardcoded credentials in repository
+
+This project follows security best practices with comprehensive secret management:
+- 📋 **[Secret Scan Report](./SECRET_SCAN_REPORT.md)** - Detailed security audit results
+- 🛡️ **[Security Recommendations](./SECURITY_RECOMMENDATIONS.md)** - Best practices and enhancements
+
+All secrets are properly externalized using environment variables, Azure Key Vault, and AWS Secrets Manager.
+
 ## Overview
 
 This project provides a distributed system to:
