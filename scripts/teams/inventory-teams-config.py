@@ -57,6 +57,9 @@ if not AWS_REGION:
 INVENTORY_DIR = REPO_ROOT / "inventory"
 INVENTORY_DIR.mkdir(exist_ok=True)
 
+LOGS_DIR = INVENTORY_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+
 print("=" * 80)
 print("TEAMS BOT CONFIGURATION INVENTORY")
 print("=" * 80)
@@ -85,9 +88,9 @@ def run_command(cmd, description, output_file=None):
             return None
         
         if output_file and result.stdout:
-            output_path = INVENTORY_DIR / output_file
+            output_path = LOGS_DIR / output_file
             output_path.write_text(result.stdout, encoding="utf-8")
-            print(f"  [OK] Exported to: {output_file}")
+            print(f"  [OK] Exported to: logs/{output_file}")
             try:
                 # Validate JSON if applicable
                 if output_file.endswith('.json'):
@@ -217,9 +220,9 @@ if manifest_path.exists():
         "developer": manifest.get("developer", {}),
     }
     
-    manifest_file = INVENTORY_DIR / "teams-app-manifest.json"
+    manifest_file = LOGS_DIR / "teams-app-manifest.json"
     manifest_file.write_text(json.dumps(manifest_config, indent=2), encoding="utf-8")
-    print("[OK] Teams app manifest exported to: teams-app-manifest.json")
+    print("[OK] Teams app manifest exported to: logs/teams-app-manifest.json")
 else:
     print("[WARN] teams-app/manifest.json not found")
 
@@ -281,11 +284,11 @@ inventory_md = f"""# Teams Bot Configuration Inventory
 
 ### Main App (Graph Access)
 
-**File**: `inventory/app-registration-main.json`
+**File**: `inventory/logs/app-registration-main.json`
 
 """
 
-app_reg_file = INVENTORY_DIR / "app-registration-main.json"
+app_reg_file = LOGS_DIR / "app-registration-main.json"
 if app_reg_file.exists():
     app_reg = json.loads(app_reg_file.read_text())
     inventory_md += f"""
@@ -295,7 +298,7 @@ if app_reg_file.exists():
 - **Publisher Domain**: {app_reg.get('publisherDomain', 'N/A')}
 - **Created**: {app_reg.get('metadata', {}).get('created', 'N/A')}
 
-**API Permissions**: See `inventory/app-permissions-main.json`
+**API Permissions**: See `inventory/logs/app-permissions-main.json`
 """
 else:
     inventory_md += "\n*(Not yet exported. Run audit to populate)*\n"
@@ -307,13 +310,13 @@ inventory_md += f"""
 
 ### Bot Access Group
 
-**File**: `inventory/entra-group-details.json` | `inventory/entra-group-members.json`
+**File**: `inventory/logs/entra-group-details.json` | `inventory/logs/entra-group-members.json`
 
 - **Object ID**: `{ENTRA_GROUP_ID}`
 
 """
 
-group_file = INVENTORY_DIR / "entra-group-members.json"
+group_file = LOGS_DIR / "entra-group-members.json"
 if group_file.exists():
     members = json.loads(group_file.read_text())
     inventory_md += f"""
@@ -336,11 +339,11 @@ inventory_md += f"""
 
 ## Teams App Configuration
 
-**File**: `inventory/teams-app-manifest.json`
+**File**: `inventory/logs/teams-app-manifest.json`
 
 """
 
-manifest_file = INVENTORY_DIR / "teams-app-manifest.json"
+manifest_file = LOGS_DIR / "teams-app-manifest.json"
 if manifest_file.exists():
     manifest_cfg = json.loads(manifest_file.read_text())
     inventory_md += f"""
@@ -426,8 +429,8 @@ Files:
 
 2. **Configure API Permissions**
    ```bash
-   # Add permissions for Teams/meetings access
-   # See: inventory/app-permissions-main.json for required permissions
+    # Add permissions for Teams/meetings access
+    # See: inventory/logs/app-permissions-main.json for required permissions
    ```
 
 3. **Create Security Group**
@@ -471,13 +474,13 @@ Files:
 ## Validation Checklist
 
 - [{'x' if app_reg_file.exists() else ' '}] Azure AD app registrations exported
-- [{'x' if (INVENTORY_DIR / 'app-permissions-main.json').exists() else ' '}] API permissions documented
+- [{'x' if (LOGS_DIR / 'app-permissions-main.json').exists() else ' '}] API permissions documented
 - [{'x' if group_file.exists() else ' '}] Security group memberships exported
 - [{'x' if manifest_file.exists() else ' '}] Teams app manifest current
 - [ ] Teams admin policies exported (manual - see section above)
 - [ ] Webhook subscriptions active and documented
 - [ ] Lambda/API configuration compatible with manifest webhook URL
-- [ ] All configs stored in `inventory/`
+- [ ] All configs stored in `inventory/logs/`
 
 ---
 
@@ -488,7 +491,7 @@ Files:
 **Files in this Inventory**:
 """
 
-for f in sorted(INVENTORY_DIR.glob("*")):
+for f in sorted(LOGS_DIR.glob("*")):
     if f.is_file():
         size = f.stat().st_size
         inventory_md += f"\n- `{f.name}` ({size} bytes)"
@@ -507,9 +510,9 @@ Reference this file when setting up a new environment.
 """
 
 # Write inventory markdown
-inventory_file = INVENTORY_DIR / "teams-config-inventory.md"
+inventory_file = LOGS_DIR / "teams-config-inventory.md"
 inventory_file.write_text(inventory_md, encoding="utf-8")
-print(f"\n[OK] Inventory markdown created: inventory/teams-config-inventory.md")
+print(f"\n[OK] Inventory markdown created: inventory/logs/teams-config-inventory.md")
 
 # ============================================================================
 # Step 8: Create Archive
@@ -526,7 +529,7 @@ archive_path = REPO_ROOT / archive_name
 try:
     import zipfile
     with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for f in INVENTORY_DIR.glob("*"):
+        for f in LOGS_DIR.glob("*"):
             if f.is_file():
                 zf.write(f, arcname=f.name)
     
@@ -544,24 +547,24 @@ print("INVENTORY COMPLETE")
 print("=" * 80)
 
 print(f"""
-Exported Files (in inventory/):
+Exported Files (in inventory/logs/):
 """)
 
-for f in sorted(INVENTORY_DIR.glob("*")):
+for f in sorted(LOGS_DIR.glob("*")):
     if f.is_file():
         print(f"  [OK] {f.name}")
 
 print(f"""
-Main Documentation: inventory/teams-config-inventory.md
+Main Documentation: inventory/logs/teams-config-inventory.md
 
 [WARN] NEXT STEPS:
-1. Review inventory/teams-config-inventory.md
+1. Review inventory/logs/teams-config-inventory.md
 2. Fill in Teams PowerShell sections manually:
    - Run Teams PowerShell commands (see markdown)
-   - Export policy configs to inventory/
+    - Export policy configs to inventory/logs/
 3. Commit to version control:
-   git add inventory/teams-config-inventory.md
-   git commit -m "docs: export Teams bot configuration inventory"
+    git add inventory/logs/teams-config-inventory.md
+    git commit -m "docs: export Teams bot configuration inventory"
 
 [WARN] REMEMBER:
 - Keep .env.local values updated

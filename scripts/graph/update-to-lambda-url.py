@@ -15,9 +15,17 @@ config = get_config()
 headers = get_graph_headers()
 user_email = config.get('user_email')
 
-# Direct Lambda Function URL (no API Gateway)
-webhook_url = os.getenv('LAMBDA_FUNCTION_URL', 'https://<YOUR_LAMBDA_URL>.lambda-url.us-east-1.on.aws/')
-sub_id = os.getenv('SUBSCRIPTION_ID', '<YOUR_SUBSCRIPTION_ID>')
+# Lambda Function URL must be provided
+webhook_url = os.getenv('LAMBDA_FUNCTION_URL')
+sub_id = os.getenv('SUBSCRIPTION_ID')
+
+if not webhook_url or not sub_id:
+    print("❌ Required environment variables not set:")
+    if not webhook_url:
+        print("   - LAMBDA_FUNCTION_URL: Direct Lambda Function URL (e.g., https://xxx.lambda-url.us-east-1.on.aws/)")
+    if not sub_id:
+        print("   - SUBSCRIPTION_ID: Existing subscription ID to update")
+    sys.exit(1)
 
 print("🔄 Updating subscription to use direct Lambda URL...")
 print(f"   Subscription ID: {sub_id}")

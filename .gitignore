@@ -96,8 +96,8 @@ logs/
 *.log
 log/
 
-# Teams inventory outputs
-inventory/
+# Teams inventory outputs (generated logs)
+inventory/logs/
 scripts/teams/inventory/
 teams-config-inventory-*.zip
 
