@@ -88,8 +88,8 @@ resource "aws_iam_role_policy" "meeting_bot_dynamodb_indexes" {
 
 // Policy for S3 transcript storage
 resource "aws_iam_role_policy" "meeting_bot_s3" {
-  name  = "${var.function_name}-s3"
-  role  = aws_iam_role.meeting_bot_role.id
+  name = "${var.function_name}-s3"
+  role = aws_iam_role.meeting_bot_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -104,16 +104,16 @@ resource "aws_iam_role_policy" "meeting_bot_s3" {
 }
 
 resource "aws_lambda_function" "meeting_bot" {
-  function_name = var.function_name
-  role          = aws_iam_role.meeting_bot_role.arn
-  handler       = var.handler
-  runtime       = var.runtime
-  timeout       = var.timeout
-  memory_size   = var.memory_size
-  
-  # Code must be deployed separately via AWS CLI or Console
-  # filename = data.archive_file.meeting_bot_zip.output_path
-  # source_code_hash = data.archive_file.meeting_bot_zip.output_base64sha256
+  function_name    = var.function_name
+  role             = aws_iam_role.meeting_bot_role.arn
+  handler          = var.handler
+  runtime          = var.runtime
+  timeout          = var.timeout
+  memory_size      = var.memory_size
+  filename         = var.package_path
+  source_code_hash = filebase64sha256(var.package_path)
+
+  # Package path supplied by root module
 
   environment {
     variables = {

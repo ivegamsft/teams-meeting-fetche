@@ -31,6 +31,18 @@ variable "authorizer_package_path" {
   default     = "../../apps/aws-lambda-authorizer/authorizer.zip"
 }
 
+variable "eventhub_lambda_package_path" {
+  description = "Path to Event Hub processor Lambda zip package"
+  type        = string
+  default     = "../../apps/aws-lambda-eventhub/lambda.zip"
+}
+
+variable "meeting_bot_package_path" {
+  description = "Path to meeting bot Lambda zip package"
+  type        = string
+  default     = "../../lambda/meeting-bot/meeting-bot.zip"
+}
+
 variable "client_state" {
   description = "Client state secret for validating Graph webhook notifications"
   type        = string
@@ -69,6 +81,38 @@ variable "azure_graph_client_secret" {
   description = "Microsoft Graph app client secret for subscription renewal"
   type        = string
   sensitive   = true
+}
+
+//=============================================================================
+// EVENT HUB PROCESSOR VARIABLES
+//=============================================================================
+
+variable "eventhub_namespace" {
+  description = "Event Hub namespace FQDN"
+  type        = string
+}
+
+variable "eventhub_name" {
+  description = "Event Hub name"
+  type        = string
+}
+
+variable "eventhub_consumer_group" {
+  description = "Event Hub consumer group"
+  type        = string
+  default     = "$Default"
+}
+
+variable "eventhub_max_events" {
+  description = "Max events per poll"
+  type        = number
+  default     = 50
+}
+
+variable "eventhub_poll_window_minutes" {
+  description = "Lookback window (minutes) for polling"
+  type        = number
+  default     = 10
 }
 
 variable "renewal_schedule_expression" {

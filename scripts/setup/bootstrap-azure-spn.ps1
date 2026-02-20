@@ -174,6 +174,58 @@ try {
 
 Write-Host "✅ Azure RBAC roles assigned" -ForegroundColor Green
 
+# Assign Azure AD Directory roles (needed for creating users and managing groups)
+Write-Host ""
+Write-Host "Assigning Azure AD Directory roles..." -ForegroundColor Cyan
+Write-Host "  Assigning: Directory.ReadWrite.All" -ForegroundColor Gray
+
+try {
+    # Get the Directory.ReadWrite.All role ID
+    $directoryWriteRoleId = az ad role list --query "[?displayName=='Directory Writers'].id" -o tsv
+    
+    if (-not $directoryWriteRoleId) {
+        Write-Host "    (Directory Writers role not found, trying alternative)" -ForegroundColor DarkGray
+        # Alternative: use a built-in role that has sufficient permissions
+        # Create a custom role assignment using the Graph API
+        $graphToken = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
+        
+        $headers = @{
+            "Authorization" = "Bearer $graphToken"
+            "Content-Type"  = "application/json"
+        }
+        
+        # Assign Directory.ReadWrite.All app role
+        $appRoleAssignment = @{
+            principalId = $objectId
+            resourceId  = "97e44b74-bbb5-4ee9-9a57-80eb6e3f3e29"
+            appRoleId   = "19dbc75e-c427-40af-ae59-e678299e54c3"
+        } | ConvertTo-Json
+        
+        try {
+            $response = Invoke-WebRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$objectId/appRoleAssignments" `
+                -Headers $headers `
+                -Method Post `
+                -Body $appRoleAssignment `
+                -ErrorAction SilentlyContinue
+            Write-Host "    ✅ Directory.ReadWrite.All app role assigned via Graph API" -ForegroundColor Green
+        } catch {
+            Write-Host "    (may already exist or insufficient permissions to assign)" -ForegroundColor DarkGray
+        }
+    } else {
+        az ad role assignment create `
+            --assignee-object-id $objectId `
+            --role $directoryWriteRoleId 2>$null
+        Write-Host "    ✅ Directory Writers role assigned" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "    ⚠️  Could not assign Directory AD role automatically" -ForegroundColor Yellow
+    Write-Host "    This requires Global Administrator role. Please assign manually:" -ForegroundColor Yellow
+    Write-Host "    1. Go to: https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RoleManagement" -ForegroundColor Yellow
+    Write-Host "    2. Search for 'Directory.ReadWrite.All' and assign to: $appId" -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter after manual assignment or to continue anyway"
+}
+
 # Output credentials
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan

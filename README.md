@@ -7,6 +7,7 @@ Automatically record Microsoft Teams meetings and fetch transcriptions with webh
 **✅ Secret Scan Status: PASSED** - No hardcoded credentials in repository
 
 This project follows security best practices with comprehensive secret management:
+
 - 📋 **[Secret Scan Report](./SECRET_SCAN_REPORT.md)** - Detailed security audit results
 - 🛡️ **[Security Recommendations](./SECURITY_RECOMMENDATIONS.md)** - Best practices and enhancements
 

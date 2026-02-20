@@ -62,10 +62,9 @@ resource "aws_lambda_function" "function" {
   runtime       = var.runtime
   timeout       = var.timeout
   memory_size   = var.memory_size
-  
-  # Code must be deployed separately via AWS CLI or Console
-  # filename = var.package_path
-  # source_code_hash = filebase64sha256(var.package_path)
+
+  filename         = var.package_path
+  source_code_hash = filebase64sha256(var.package_path)
 
   environment {
     variables = merge(

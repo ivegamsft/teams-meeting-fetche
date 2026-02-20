@@ -66,6 +66,16 @@ output "subscriptions_table_arn" {
   value       = module.storage.subscriptions_table_arn
 }
 
+output "eventhub_checkpoints_table_name" {
+  description = "Event Hub checkpoints table name"
+  value       = module.storage.eventhub_checkpoints_table_name
+}
+
+output "eventhub_checkpoints_table_arn" {
+  description = "Event Hub checkpoints table ARN"
+  value       = module.storage.eventhub_checkpoints_table_arn
+}
+
 //=============================================================================
 // NOTIFICATIONS OUTPUTS
 //=============================================================================
@@ -121,6 +131,16 @@ output "meeting_bot_function_name" {
 output "meeting_bot_function_arn" {
   description = "Meeting bot Lambda function ARN"
   value       = module.meeting_bot.function_arn
+}
+
+output "eventhub_processor_function_name" {
+  description = "Event Hub processor Lambda function name"
+  value       = module.eventhub_processor.function_name
+}
+
+output "eventhub_processor_function_arn" {
+  description = "Event Hub processor Lambda function ARN"
+  value       = module.eventhub_processor.function_arn
 }
 
 output "meeting_bot_webhook_url" {

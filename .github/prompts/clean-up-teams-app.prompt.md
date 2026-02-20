@@ -118,6 +118,7 @@ If the Teams app registration changed (new ID, new webhook, new bot):
 
 1. Update the manifest version: `"version": "1.0.x"` → `"version": "1.0.(x+1)"`
 2. Add a note in the manifest (as a comment or separate CHANGELOG entry):
+
    ```markdown
    ## Version 1.0.x Changes
 

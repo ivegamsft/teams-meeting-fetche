@@ -171,6 +171,11 @@ resource "azuread_group" "admins" {
   security_enabled = true
 
   description = "Administrators for Teams Meeting Fetcher application"
+
+  lifecycle {
+    prevent_destroy = true      # Prevent accidental deletion
+    ignore_changes  = [members] # Don't manage members in terraform to avoid conflicts with manual additions
+  }
 }
 
 // Test user for development (optional)

@@ -15,6 +15,11 @@ variable "runtime" {
   default     = "nodejs20.x"
 }
 
+variable "package_path" {
+  description = "Path to meeting bot Lambda deployment package (zip file)"
+  type        = string
+}
+
 variable "timeout" {
   description = "Lambda timeout in seconds"
   type        = number

@@ -40,8 +40,6 @@ These scripts check various system states:
 - **fix_meeting_autorecord.py** - Enable auto-recording on existing meeting
 - **test_transcription.py** - End-to-end transcription test
 
-
-
 ---
 
 ## Quick Start

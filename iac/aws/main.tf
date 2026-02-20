@@ -16,8 +16,9 @@ locals {
 module "storage" {
   source = "./modules/storage"
 
-  bucket_name       = var.s3_bucket_name
-  enable_versioning = false
+  bucket_name                     = var.s3_bucket_name
+  enable_versioning               = false
+  eventhub_checkpoints_table_name = "eventhub-checkpoints-${var.environment}"
 
   tags = local.common_tags
 }
@@ -68,6 +69,7 @@ module "lambda" {
   function_name = "tmf-webhook-writer-${var.environment}"
   handler       = "handler.handler"
   runtime       = "nodejs20.x"
+  package_path  = var.lambda_package_path
   s3_bucket_arn = module.storage.bucket_arn
   sns_topic_arn = module.notifications.topic_arn
   timeout       = 30
@@ -91,6 +93,7 @@ module "authorizer" {
   function_name = "tmf-webhook-authorizer-${var.environment}"
   handler       = "authorizer.handler"
   runtime       = "nodejs20.x"
+  package_path  = var.authorizer_package_path
   client_state  = var.client_state
   timeout       = 10
   memory_size   = 128
@@ -129,6 +132,7 @@ module "meeting_bot" {
   function_name                   = "tmf-meeting-bot-${var.environment}"
   handler                         = "index.handler"
   runtime                         = "nodejs20.x"
+  package_path                    = var.meeting_bot_package_path
   timeout                         = 300
   memory_size                     = 512
   meetings_table_name             = "meeting-bot-sessions-${var.environment}"
@@ -146,6 +150,36 @@ module "meeting_bot" {
   poll_lookahead_minutes          = var.poll_lookahead_minutes
   graph_notification_url          = var.graph_notification_url
   graph_notification_client_state = var.graph_notification_client_state
+
+  tags = local.common_tags
+}
+
+//=============================================================================
+// EVENT HUB PROCESSOR - Lambda consumer (RBAC only)
+//=============================================================================
+
+module "eventhub_processor" {
+  source = "./modules/eventhub-processor"
+
+  function_name                = "tmf-eventhub-processor-${var.environment}"
+  handler                      = "eventhub-handler.handler"
+  runtime                      = "nodejs20.x"
+  timeout                      = 60
+  memory_size                  = 256
+  package_path                 = var.eventhub_lambda_package_path
+  bucket_name                  = module.storage.bucket_name
+  bucket_arn                   = module.storage.bucket_arn
+  checkpoint_table_name        = module.storage.eventhub_checkpoints_table_name
+  checkpoint_table_arn         = module.storage.eventhub_checkpoints_table_arn
+  eventhub_namespace           = var.eventhub_namespace
+  eventhub_name                = var.eventhub_name
+  eventhub_consumer_group      = var.eventhub_consumer_group
+  eventhub_max_events          = var.eventhub_max_events
+  eventhub_poll_window_minutes = var.eventhub_poll_window_minutes
+  azure_tenant_id              = var.azure_graph_tenant_id
+  azure_client_id              = var.azure_graph_client_id
+  azure_client_secret          = var.azure_graph_client_secret
+  sns_topic_arn                = module.notifications.topic_arn
 
   tags = local.common_tags
 }
